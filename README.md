@@ -17,10 +17,13 @@ This project provides a complete home security system with two main components:
 - Door and window sensor integration
 - Network discovery for easy setup
 - Real-time alerts and status updates
+- Unique device identification for multi-device systems
 
 ### Receiver Component (REC)
 - Secure PIN-based authentication system
 - Real-time sensor status dashboard
+- Support for multiple sensor devices with unique IDs
+- Scalable dashboard view for monitoring all connected devices
 - Alert history and management
 - Customizable system settings
 - TCP/UDP network communication

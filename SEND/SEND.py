@@ -13,6 +13,7 @@ import socket
 import json
 import threading
 import logging
+import uuid
 from datetime import datetime
 try:
     import RPi.GPIO as GPIO
@@ -45,7 +46,9 @@ CONFIG = {
     "led_pin": 22,                   # GPIO pin for status LED
     "capture_interval": 5,           # Minimum seconds between captures
     "discovery_interval": 30,        # Seconds between discovery broadcasts
-    "image_path": "captures"         # Folder to store captured images
+    "image_path": "captures",        # Folder to store captured images
+    "device_id": "",                 # Unique device ID (will be generated)
+    "device_name": "Security Sensor" # Human-readable device name
 }
 
 class SecuritySender:
@@ -55,6 +58,9 @@ class SecuritySender:
         self.camera = None
         self.discovery_thread = None
         
+        # Load or generate unique device ID
+        self._load_or_generate_device_id()
+        
         # Create image directory if it doesn't exist
         os.makedirs(CONFIG["image_path"], exist_ok=True)
         
@@ -62,6 +68,48 @@ class SecuritySender:
         if RPI_AVAILABLE:
             self._setup_gpio()
             self._setup_camera()
+    
+    def _load_or_generate_device_id(self):
+        """Load existing device ID or generate a new one"""
+        config_file = "sender_config.json"
+        
+        try:
+            if os.path.exists(config_file):
+                with open(config_file, "r") as f:
+                    saved_config = json.load(f)
+                    if "device_id" in saved_config and saved_config["device_id"]:
+                        CONFIG["device_id"] = saved_config["device_id"]
+                        CONFIG["device_name"] = saved_config.get("device_name", CONFIG["device_name"])
+                        logger.info(f"Loaded device ID: {CONFIG['device_id']}")
+                    else:
+                        self._generate_new_device_id()
+            else:
+                self._generate_new_device_id()
+                
+        except Exception as e:
+            logger.error(f"Error loading device ID: {e}")
+            self._generate_new_device_id()
+    
+    def _generate_new_device_id(self):
+        """Generate a new unique device ID"""
+        CONFIG["device_id"] = str(uuid.uuid4())
+        
+        # Set default device name with hostname and partial ID
+        hostname = socket.gethostname()
+        CONFIG["device_name"] = f"{hostname}-{CONFIG['device_id'][:8]}"
+        
+        logger.info(f"Generated new device ID: {CONFIG['device_id']}")
+        
+        # Save to config file
+        config_file = "sender_config.json"
+        try:
+            with open(config_file, "w") as f:
+                json.dump({
+                    "device_id": CONFIG["device_id"],
+                    "device_name": CONFIG["device_name"]
+                }, f)
+        except Exception as e:
+            logger.error(f"Failed to save device ID: {e}")
     
     def _setup_gpio(self):
         """Initialize GPIO pins"""
@@ -159,8 +207,8 @@ class SecuritySender:
             # Create UDP socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             
-            # Prepare message
-            message = f"SENSOR:{sensor_type}:{status}"
+            # Prepare message - include device ID and name
+            message = f"SENSOR:{CONFIG['device_id']}:{CONFIG['device_name']}:{sensor_type}:{status}"
             
             # Send message
             sock.sendto(message.encode(), (CONFIG["receiver_ip"], CONFIG["udp_port"]))
@@ -211,8 +259,8 @@ class SecuritySender:
         
         try:
             while self.running:
-                # Broadcast discovery message
-                message = "SECURITY_DEVICE:ONLINE"
+                # Broadcast discovery message with device ID and name
+                message = f"SECURITY_DEVICE:ONLINE:{CONFIG['device_id']}:{CONFIG['device_name']}"
                 sock.sendto(message.encode(), ('<broadcast>', CONFIG["discovery_port"]))
                 logger.debug("Sent discovery broadcast")
                 
@@ -223,8 +271,8 @@ class SecuritySender:
                     data = data.decode()
                     
                     if data.startswith("DISCOVER:"):
-                        # Send direct response
-                        response = f"SECURITY_DEVICE:ONLINE:{socket.gethostname()}"
+                        # Send direct response with device ID and name
+                        response = f"SECURITY_DEVICE:ONLINE:{CONFIG['device_id']}:{CONFIG['device_name']}"
                         sock.sendto(response.encode(), addr)
                         logger.info(f"Responded to discovery request from {addr}")
                 except socket.timeout:
@@ -238,9 +286,63 @@ class SecuritySender:
         finally:
             sock.close()
     
+    def discover_receiver(self):
+        """Discover the receiver IP address using broadcast"""
+        logger.info("Discovering receiver...")
+        
+        # Create a UDP socket for discovery
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.settimeout(5)  # 5-second timeout for discovery
+        
+        discovered_ip = None
+        max_attempts = 5
+        attempt = 0
+        
+        while not discovered_ip and attempt < max_attempts:
+            attempt += 1
+            try:
+                # Broadcast discovery message
+                discovery_message = "DISCOVER:SENDER"
+                sock.sendto(discovery_message.encode(), ('<broadcast>', CONFIG["discovery_port"]))
+                logger.info(f"Sent discovery broadcast (attempt {attempt}/{max_attempts})")
+                
+                # Wait for response
+                try:
+                    data, addr = sock.recvfrom(1024)
+                    data = data.decode()
+                    
+                    if data.startswith("SECURITY_SYSTEM:ONLINE:"):
+                        # Extract IP from response
+                        discovered_ip = data.split(":")[2]
+                        logger.info(f"Discovered receiver at {discovered_ip}")
+                        
+                        # Update CONFIG with discovered IP
+                        CONFIG["receiver_ip"] = discovered_ip
+                        return discovered_ip
+                except socket.timeout:
+                    logger.warning("Discovery timeout, retrying...")
+                    
+            except Exception as e:
+                logger.error(f"Discovery error: {e}")
+                
+            time.sleep(2)  # Wait before next attempt
+        
+        if not discovered_ip:
+            logger.warning("Failed to discover receiver, using default IP")
+        
+        return discovered_ip
+    
     def start(self):
         """Start the security sender"""
         self.running = True
+        
+        # Try to discover the receiver first
+        discovered_ip = self.discover_receiver()
+        if discovered_ip:
+            logger.info(f"Using discovered receiver IP: {discovered_ip}")
+        else:
+            logger.info(f"Using default receiver IP: {CONFIG['receiver_ip']}")
         
         # Start discovery service
         self.discovery_thread = threading.Thread(target=self._discovery_service)

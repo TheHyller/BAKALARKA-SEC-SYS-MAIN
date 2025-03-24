@@ -87,15 +87,41 @@ class MainScreen(Screen):
         button_layout.add_widget(self.toggle_button)
         button_layout.add_widget(self.change_pin_button)
         
-        # Sensor status area
-        sensor_layout = BoxLayout(orientation='vertical', size_hint_y=0.6)
-        sensor_layout.add_widget(Label(text="Sensor Status:", font_size=18, size_hint_y=0.1))
+        # Add navigation buttons
+        nav_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=0.2)
+        
+        dashboard_button = Button(
+            text="Sensor Dashboard",
+            font_size=20
+        )
+        dashboard_button.bind(on_release=self.open_dashboard)
+        
+        alerts_button = Button(
+            text="Alerts History",
+            font_size=20
+        )
+        alerts_button.bind(on_release=self.open_alerts)
+        
+        settings_button = Button(
+            text="Settings",
+            font_size=20
+        )
+        settings_button.bind(on_release=self.open_settings)
+        
+        nav_layout.add_widget(dashboard_button)
+        nav_layout.add_widget(alerts_button)
+        nav_layout.add_widget(settings_button)
+        
+        # Sensor status area (simplified - now we have a dedicated dashboard)
+        sensor_layout = BoxLayout(orientation='vertical', size_hint_y=0.4)
+        sensor_layout.add_widget(Label(text="Recent Activity:", font_size=18, size_hint_y=0.2))
         self.sensor_list = GridLayout(cols=1, spacing=5)
         sensor_layout.add_widget(self.sensor_list)
         
         # Add widgets to main layout
         layout.add_widget(self.status_label)
         layout.add_widget(button_layout)
+        layout.add_widget(nav_layout)  # Add the navigation buttons
         layout.add_widget(sensor_layout)
         
         self.add_widget(layout)
@@ -260,3 +286,16 @@ class MainScreen(Screen):
                 size_hint=(0.5, 0.3)
             )
             error_popup.open()
+    
+    # Add new navigation methods
+    def open_dashboard(self, instance):
+        """Open the sensor dashboard screen"""
+        self.manager.current = 'dashboard'
+    
+    def open_alerts(self, instance):
+        """Open the alerts history screen"""
+        self.manager.current = 'alerts'
+    
+    def open_settings(self, instance):
+        """Open the settings screen"""
+        self.manager.current = 'settings'

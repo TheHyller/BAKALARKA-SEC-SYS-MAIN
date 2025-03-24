@@ -1,11 +1,17 @@
 import socket
 import threading
 import time
+import json
+from datetime import datetime
 try:
-    from config.settings import get_setting
+    from config.settings import get_setting, add_sensor_device, update_sensor_status
 except ImportError:
     def get_setting(section, default):
         return default
+    def add_sensor_device(device_id, data):
+        pass
+    def update_sensor_status(device_id, sensor_type, status):
+        pass
 
 class TCPListener(threading.Thread):
     def __init__(self):
@@ -86,6 +92,26 @@ class UDPListener(threading.Thread):
                     data = data.decode('utf-8')
                     print(f"DEBUG: UDP data received from {address}: {data}")
                     
+                    # Process sensor data
+                    if data.startswith("SENSOR:"):
+                        parts = data.split(":")
+                        if len(parts) >= 5:  # We expect SENSOR:ID:NAME:TYPE:STATUS
+                            device_id = parts[1]
+                            device_name = parts[2]
+                            sensor_type = parts[3]
+                            status = parts[4]
+                            
+                            # Register or update device info
+                            device_data = {
+                                "name": device_name,
+                                "ip": address[0],
+                                "last_seen": datetime.now().isoformat(),
+                            }
+                            add_sensor_device(device_id, device_data)
+                            
+                            # Update sensor status
+                            update_sensor_status(device_id, sensor_type, status)
+                            
                     for callback in self.callbacks:
                         callback(data, address)
                 except Exception as e:
@@ -135,11 +161,38 @@ class DiscoveryListener(threading.Thread):
                     data = data.decode('utf-8')
                     print(f"DEBUG: Discovery message received from {address}: {data}")
                     
-                    # Send response to discovery request
+                    # Register discovered devices
+                    if data.startswith("SECURITY_DEVICE:ONLINE:"):
+                        parts = data.split(":")
+                        if len(parts) >= 4:
+                            device_id = parts[2]
+                            device_name = parts[3]
+                            
+                            # Register or update device
+                            device_data = {
+                                "name": device_name,
+                                "ip": address[0],
+                                "last_seen": datetime.now().isoformat(),
+                            }
+                            add_sensor_device(device_id, device_data)
+                            print(f"DEBUG: Registered sensor device {device_name} ({device_id})")
+                    
+                    # Send response to discovery request with our IP address
                     if data.startswith("DISCOVER:"):
-                        response = "SECURITY_SYSTEM:ONLINE"
+                        # Get local IP address (the one used to communicate with the sender)
+                        local_ip = socket.gethostbyname(socket.gethostname())
+                        
+                        # For cases where gethostbyname returns localhost, try a different approach
+                        if local_ip.startswith("127."):
+                            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                            # This doesn't actually send any packets
+                            s.connect((address[0], 1))
+                            local_ip = s.getsockname()[0]
+                            s.close()
+                            
+                        response = f"SECURITY_SYSTEM:ONLINE:{local_ip}"
                         self.socket.sendto(response.encode('utf-8'), address)
-                        print(f"DEBUG: Sent discovery response to {address}")
+                        print(f"DEBUG: Sent discovery response to {address} with IP {local_ip}")
                     
                     for callback in self.callbacks:
                         callback(data, address)

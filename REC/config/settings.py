@@ -74,3 +74,47 @@ def toggle_system_state(new_state=None):
     if new_state is None:
         new_state = not settings.get("system_active", DEFAULT_SETTINGS["system_active"])
     return update_setting("system_active", new_state)
+
+def get_sensor_devices():
+    """Get list of known sensor devices"""
+    return settings.get("sensor_devices", {})
+
+def add_sensor_device(device_id, device_data):
+    """Add or update a sensor device"""
+    if "sensor_devices" not in settings:
+        settings["sensor_devices"] = {}
+    
+    # Update or add the device
+    settings["sensor_devices"][device_id] = device_data
+    return save_settings()
+
+def remove_sensor_device(device_id):
+    """Remove a sensor device"""
+    if "sensor_devices" in settings and device_id in settings["sensor_devices"]:
+        del settings["sensor_devices"][device_id]
+        return save_settings()
+    return False
+
+def get_sensor_status():
+    """Get current status of all sensor devices"""
+    return settings.get("sensor_status", {})
+
+def update_sensor_status(device_id, sensor_type, status, timestamp=None):
+    """Update the status of a sensor"""
+    if "sensor_status" not in settings:
+        settings["sensor_status"] = {}
+    
+    if device_id not in settings["sensor_status"]:
+        settings["sensor_status"][device_id] = {}
+    
+    # Update status with timestamp
+    if timestamp is None:
+        import time
+        timestamp = time.time()
+        
+    settings["sensor_status"][device_id][sensor_type] = {
+        "status": status,
+        "timestamp": timestamp
+    }
+    
+    return save_settings()
