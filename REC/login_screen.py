@@ -36,7 +36,7 @@ class LoginScreen(Screen):
         keypad_layout = GridLayout(cols=3, spacing=[10, 10], size_hint_y=0.5)
         
         # Create number buttons
-        for i in range(1, 9):
+        for i in range(1, 10):  # This creates buttons 1 through 9
             btn = Button(text=str(i), font_size=24)
             btn.bind(on_release=self.on_button_press)
             keypad_layout.add_widget(btn)
