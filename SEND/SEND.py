@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Security System - Sender Component (SEND)
-Motion detection and image transmission for Raspberry Pi
+Bezpečnostný systém - Komponent odosielateľa (SEND)
+Detekcia pohybu a prenos obrázkov pre Raspberry Pi
 
-This module interfaces with GPIO sensors and camera to detect movement
-and send alerts to the receiver component.
+Tento modul komunikuje s GPIO senzormi a kamerou na detekciu pohybu
+a odosiela upozornenia do komponenty prijímača.
 """
 
 import os
@@ -20,10 +20,10 @@ try:
     from picamera import PiCamera
     RPI_AVAILABLE = True
 except ImportError:
-    print("Warning: Running in simulation mode (RPi.GPIO or picamera not available)")
+    print("Upozornenie: Beží v simulačnom režime (RPi.GPIO alebo picamera nie sú dostupné)")
     RPI_AVAILABLE = False
 
-# Configure logging
+# Konfigurácia logovania
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -34,21 +34,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger("SecuritySender")
 
-# Configuration
+# Konfigurácia
 CONFIG = {
-    "receiver_ip": "192.168.1.100",  # IP address of the receiver (REC component)
-    "tcp_port": 8080,                # Port for image transmission
-    "udp_port": 8081,                # Port for sensor status updates
-    "discovery_port": 8082,          # Port for discovery service
-    "motion_pin": 17,                # GPIO pin for motion sensor
-    "door_pin": 18,                  # GPIO pin for door sensor
-    "window_pin": 27,                # GPIO pin for window sensor
-    "led_pin": 22,                   # GPIO pin for status LED
-    "capture_interval": 5,           # Minimum seconds between captures
-    "discovery_interval": 30,        # Seconds between discovery broadcasts
-    "image_path": "captures",        # Folder to store captured images
-    "device_id": "",                 # Unique device ID (will be generated)
-    "device_name": "Security Sensor" # Human-readable device name
+    "receiver_ip": "192.168.1.100",  # IP adresa prijímača (REC komponenta)
+    "tcp_port": 8080,                # Port pre prenos obrázkov
+    "udp_port": 8081,                # Port pre aktualizácie stavu senzorov
+    "discovery_port": 8082,          # Port pre službu objavovania
+    "motion_pin": 17,                # GPIO pin pre senzor pohybu
+    "door_pin": 18,                  # GPIO pin pre dverový senzor
+    "window_pin": 27,                # GPIO pin pre okenný senzor
+    "led_pin": 22,                   # GPIO pin pre stavovú LED
+    "capture_interval": 5,           # Minimálny počet sekúnd medzi zachyteniami
+    "discovery_interval": 30,        # Sekundy medzi vysielaním objavovania
+    "image_path": "captures",        # Priečinok na ukladanie zachytených obrázkov
+    "device_id": "",                 # Unikátne ID zariadenia (bude vygenerované)
+    "device_name": "Security Sensor" # Ľudsky čitateľný názov zariadenia
 }
 
 class SecuritySender:
@@ -58,19 +58,19 @@ class SecuritySender:
         self.camera = None
         self.discovery_thread = None
         
-        # Load or generate unique device ID
+        # Načítanie alebo generovanie unikátneho ID zariadenia
         self._load_or_generate_device_id()
         
-        # Create image directory if it doesn't exist
+        # Vytvorenie adresára pre obrázky, ak neexistuje
         os.makedirs(CONFIG["image_path"], exist_ok=True)
         
-        # Initialize GPIO if available
+        # Inicializácia GPIO, ak je dostupné
         if RPI_AVAILABLE:
             self._setup_gpio()
             self._setup_camera()
     
     def _load_or_generate_device_id(self):
-        """Load existing device ID or generate a new one"""
+        """Načíta existujúce ID zariadenia alebo vygeneruje nové"""
         config_file = "sender_config.json"
         
         try:
@@ -80,27 +80,27 @@ class SecuritySender:
                     if "device_id" in saved_config and saved_config["device_id"]:
                         CONFIG["device_id"] = saved_config["device_id"]
                         CONFIG["device_name"] = saved_config.get("device_name", CONFIG["device_name"])
-                        logger.info(f"Loaded device ID: {CONFIG['device_id']}")
+                        logger.info(f"Načítané ID zariadenia: {CONFIG['device_id']}")
                     else:
                         self._generate_new_device_id()
             else:
                 self._generate_new_device_id()
                 
         except Exception as e:
-            logger.error(f"Error loading device ID: {e}")
+            logger.error(f"Chyba pri načítaní ID zariadenia: {e}")
             self._generate_new_device_id()
     
     def _generate_new_device_id(self):
-        """Generate a new unique device ID"""
+        """Vygeneruje nové unikátne ID zariadenia"""
         CONFIG["device_id"] = str(uuid.uuid4())
         
-        # Set default device name with hostname and partial ID
+        # Nastavenie predvoleného názvu zariadenia s názvom hostiteľa a čiastočným ID
         hostname = socket.gethostname()
         CONFIG["device_name"] = f"{hostname}-{CONFIG['device_id'][:8]}"
         
-        logger.info(f"Generated new device ID: {CONFIG['device_id']}")
+        logger.info(f"Vygenerované nové ID zariadenia: {CONFIG['device_id']}")
         
-        # Save to config file
+        # Uloženie do konfiguračného súboru
         config_file = "sender_config.json"
         try:
             with open(config_file, "w") as f:
@@ -109,22 +109,22 @@ class SecuritySender:
                     "device_name": CONFIG["device_name"]
                 }, f)
         except Exception as e:
-            logger.error(f"Failed to save device ID: {e}")
+            logger.error(f"Zlyhalo uloženie ID zariadenia: {e}")
     
     def _setup_gpio(self):
-        """Initialize GPIO pins"""
+        """Inicializácia GPIO pinov"""
         GPIO.setmode(GPIO.BCM)
         
-        # Setup input pins with pull-down resistors
+        # Nastavenie vstupných pinov s pull-down rezistormi
         GPIO.setup(CONFIG["motion_pin"], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         GPIO.setup(CONFIG["door_pin"], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         GPIO.setup(CONFIG["window_pin"], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         
-        # Setup output pin for LED
+        # Nastavenie výstupného pinu pre LED
         GPIO.setup(CONFIG["led_pin"], GPIO.OUT)
         GPIO.output(CONFIG["led_pin"], GPIO.LOW)
         
-        # Setup event detection
+        # Nastavenie detekcie udalostí
         GPIO.add_event_detect(CONFIG["motion_pin"], GPIO.RISING, 
                              callback=self._on_motion_detected)
         GPIO.add_event_detect(CONFIG["door_pin"], GPIO.BOTH, 
@@ -132,51 +132,51 @@ class SecuritySender:
         GPIO.add_event_detect(CONFIG["window_pin"], GPIO.BOTH, 
                              callback=self._on_window_change)
         
-        logger.info("GPIO pins initialized")
+        logger.info("GPIO piny inicializované")
     
     def _setup_camera(self):
-        """Initialize the camera"""
+        """Inicializácia kamery"""
         try:
             self.camera = PiCamera()
             self.camera.resolution = (1280, 720)
-            self.camera.rotation = 0  # Adjust based on camera orientation
-            logger.info("Camera initialized")
+            self.camera.rotation = 0  # Úprava podľa orientácie kamery
+            logger.info("Kamera inicializovaná")
         except Exception as e:
-            logger.error(f"Failed to initialize camera: {e}")
+            logger.error(f"Zlyhala inicializácia kamery: {e}")
     
     def _on_motion_detected(self, channel):
-        """Callback for motion detection"""
-        logger.info("Motion detected!")
+        """Callback pre detekciu pohybu"""
+        logger.info("Pohyb detekovaný!")
         self._send_sensor_update("motion", "DETECTED")
         self._capture_image("motion")
     
     def _on_door_change(self, channel):
-        """Callback for door sensor state change"""
+        """Callback pre zmenu stavu dverového senzora"""
         state = "OPEN" if GPIO.input(CONFIG["door_pin"]) else "CLOSED"
-        logger.info(f"Door {state}")
+        logger.info(f"Dvere {state}")
         self._send_sensor_update("door", state)
         if state == "OPEN":
             self._capture_image("door")
     
     def _on_window_change(self, channel):
-        """Callback for window sensor state change"""
+        """Callback pre zmenu stavu okenného senzora"""
         state = "OPEN" if GPIO.input(CONFIG["window_pin"]) else "CLOSED"
-        logger.info(f"Window {state}")
+        logger.info(f"Okno {state}")
         self._send_sensor_update("window", state)
         if state == "OPEN":
             self._capture_image("window")
     
     def _capture_image(self, trigger_type):
-        """Capture an image from the camera if available"""
-        # Check if enough time has passed since last capture
+        """Zachytenie obrázka z kamery, ak je dostupná"""
+        # Kontrola, či uplynul dostatočný čas od posledného zachytenia
         current_time = time.time()
         if current_time - self.last_capture_time < CONFIG["capture_interval"]:
-            logger.debug("Skipping capture, too soon after previous capture")
+            logger.debug("Preskakujem zachytenie, príliš krátky čas od predchádzajúceho zachytenia")
             return
         
         self.last_capture_time = current_time
         
-        # Flash LED to indicate capture
+        # Zablikanie LED na indikáciu zachytenia
         if RPI_AVAILABLE:
             GPIO.output(CONFIG["led_pin"], GPIO.HIGH)
         
@@ -185,48 +185,48 @@ class SecuritySender:
         
         try:
             if self.camera:
-                # Allow camera to adjust to lighting
+                # Daj kamere čas na prispôsobenie sa osvetleniu
                 time.sleep(0.5)
-                # Capture the image
+                # Zachyť obrázok
                 self.camera.capture(image_path)
-                logger.info(f"Image captured: {image_path}")
-                # Send the image to the receiver
+                logger.info(f"Obrázok zachytený: {image_path}")
+                # Odošli obrázok prijímaču
                 self._send_image(image_path, trigger_type)
             else:
-                logger.warning("Camera not available, skipping capture")
+                logger.warning("Kamera nie je dostupná, preskakujem zachytenie")
         except Exception as e:
-            logger.error(f"Failed to capture image: {e}")
+            logger.error(f"Zlyhalo zachytenie obrázka: {e}")
         finally:
-            # Turn off LED
+            # Vypni LED
             if RPI_AVAILABLE:
                 GPIO.output(CONFIG["led_pin"], GPIO.LOW)
     
     def _send_sensor_update(self, sensor_type, status):
-        """Send sensor update via UDP"""
+        """Odoslanie aktualizácie senzora cez UDP"""
         try:
-            # Create UDP socket
+            # Vytvorenie UDP socketu
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             
-            # Prepare message - include device ID and name
+            # Príprava správy - zahrnutie ID zariadenia a názvu
             message = f"SENSOR:{CONFIG['device_id']}:{CONFIG['device_name']}:{sensor_type}:{status}"
             
-            # Send message
+            # Odoslanie správy
             sock.sendto(message.encode(), (CONFIG["receiver_ip"], CONFIG["udp_port"]))
-            logger.debug(f"Sent UDP update: {message}")
+            logger.debug(f"Odoslaná UDP aktualizácia: {message}")
             
         except Exception as e:
-            logger.error(f"Failed to send sensor update: {e}")
+            logger.error(f"Zlyhalo odoslanie aktualizácie senzora: {e}")
         finally:
             sock.close()
     
     def _send_image(self, image_path, trigger_type):
-        """Send image via TCP"""
+        """Odoslanie obrázka cez TCP"""
         try:
-            # Create TCP socket
+            # Vytvorenie TCP socketu
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((CONFIG["receiver_ip"], CONFIG["tcp_port"]))
             
-            # Send header with image info
+            # Odoslanie hlavičky s informáciami o obrázku
             header = {
                 "type": "image",
                 "trigger": trigger_type,
@@ -239,61 +239,61 @@ class SecuritySender:
             sock.sendall(header_length)
             sock.sendall(header_json)
             
-            # Send image data
+            # Odoslanie dát obrázka
             with open(image_path, "rb") as f:
                 image_data = f.read()
                 sock.sendall(len(image_data).to_bytes(4, byteorder='big'))
                 sock.sendall(image_data)
             
-            logger.info(f"Image sent: {image_path}")
+            logger.info(f"Obrázok odoslaný: {image_path}")
             
         except Exception as e:
-            logger.error(f"Failed to send image: {e}")
+            logger.error(f"Zlyhalo odoslanie obrázka: {e}")
         finally:
             sock.close()
     
     def _discovery_service(self):
-        """Run discovery service to broadcast presence"""
+        """Spustenie služby objavovania na vysielanie prítomnosti"""
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         
         try:
             while self.running:
-                # Broadcast discovery message with device ID and name
+                # Vysielanie správy objavovania s ID zariadenia a názvom
                 message = f"SECURITY_DEVICE:ONLINE:{CONFIG['device_id']}:{CONFIG['device_name']}"
                 sock.sendto(message.encode(), ('<broadcast>', CONFIG["discovery_port"]))
-                logger.debug("Sent discovery broadcast")
+                logger.debug("Odoslané vysielanie objavovania")
                 
-                # Listen for discovery requests
+                # Načúvanie na požiadavky objavovania
                 sock.settimeout(CONFIG["discovery_interval"])
                 try:
                     data, addr = sock.recvfrom(1024)
                     data = data.decode()
                     
                     if data.startswith("DISCOVER:"):
-                        # Send direct response with device ID and name
+                        # Odošli priamu odpoveď s ID zariadenia a názvom
                         response = f"SECURITY_DEVICE:ONLINE:{CONFIG['device_id']}:{CONFIG['device_name']}"
                         sock.sendto(response.encode(), addr)
-                        logger.info(f"Responded to discovery request from {addr}")
+                        logger.info(f"Odpovedané na požiadavku objavovania z {addr}")
                 except socket.timeout:
                     pass
                 except Exception as e:
-                    logger.error(f"Discovery listen error: {e}")
+                    logger.error(f"Chyba načúvania objavovania: {e}")
                 
                 time.sleep(CONFIG["discovery_interval"])
         except Exception as e:
-            logger.error(f"Discovery service error: {e}")
+            logger.error(f"Chyba služby objavovania: {e}")
         finally:
             sock.close()
     
     def discover_receiver(self):
-        """Discover the receiver IP address using broadcast"""
-        logger.info("Discovering receiver...")
+        """Objavenie IP adresy prijímača pomocou vysielania"""
+        logger.info("Objavovanie prijímača...")
         
-        # Create a UDP socket for discovery
+        # Vytvorenie UDP socketu pre objavovanie
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.settimeout(5)  # 5-second timeout for discovery
+        sock.settimeout(5)  # 5-sekundový časový limit pre objavovanie
         
         discovered_ip = None
         max_attempts = 5
@@ -302,60 +302,60 @@ class SecuritySender:
         while not discovered_ip and attempt < max_attempts:
             attempt += 1
             try:
-                # Broadcast discovery message
+                # Vysielanie správy objavovania
                 discovery_message = "DISCOVER:SENDER"
                 sock.sendto(discovery_message.encode(), ('<broadcast>', CONFIG["discovery_port"]))
-                logger.info(f"Sent discovery broadcast (attempt {attempt}/{max_attempts})")
+                logger.info(f"Odoslané vysielanie objavovania (pokus {attempt}/{max_attempts})")
                 
-                # Wait for response
+                # Čakanie na odpoveď
                 try:
                     data, addr = sock.recvfrom(1024)
                     data = data.decode()
                     
                     if data.startswith("SECURITY_SYSTEM:ONLINE:"):
-                        # Extract IP from response
+                        # Extrahovanie IP z odpovede
                         discovered_ip = data.split(":")[2]
-                        logger.info(f"Discovered receiver at {discovered_ip}")
+                        logger.info(f"Objavený prijímač na {discovered_ip}")
                         
-                        # Update CONFIG with discovered IP
+                        # Aktualizácia CONFIG s objavenou IP
                         CONFIG["receiver_ip"] = discovered_ip
                         return discovered_ip
                 except socket.timeout:
-                    logger.warning("Discovery timeout, retrying...")
+                    logger.warning("Časový limit objavovania, skúšam znova...")
                     
             except Exception as e:
-                logger.error(f"Discovery error: {e}")
+                logger.error(f"Chyba objavovania: {e}")
                 
-            time.sleep(2)  # Wait before next attempt
+            time.sleep(2)  # Čakanie pred ďalším pokusom
         
         if not discovered_ip:
-            logger.warning("Failed to discover receiver, using default IP")
+            logger.warning("Zlyhalo objavenie prijímača, používam predvolenú IP")
         
         return discovered_ip
     
     def start(self):
-        """Start the security sender"""
+        """Spustenie odosielateľa zabezpečenia"""
         self.running = True
         
-        # Try to discover the receiver first
+        # Najprv sa pokús objaviť prijímač
         discovered_ip = self.discover_receiver()
         if discovered_ip:
-            logger.info(f"Using discovered receiver IP: {discovered_ip}")
+            logger.info(f"Používam objavenú IP prijímača: {discovered_ip}")
         else:
-            logger.info(f"Using default receiver IP: {CONFIG['receiver_ip']}")
+            logger.info(f"Používam predvolenú IP prijímača: {CONFIG['receiver_ip']}")
         
-        # Start discovery service
+        # Spusti službu objavovania
         self.discovery_thread = threading.Thread(target=self._discovery_service)
         self.discovery_thread.daemon = True
         self.discovery_thread.start()
         
-        logger.info("Security sender started")
+        logger.info("Odosielateľ zabezpečenia spustený")
         
-        # For testing in development, simulate a motion detection
+        # Pre testovanie vo vývoji, simuluj detekciu pohybu
         if not RPI_AVAILABLE:
             def simulation():
                 while self.running:
-                    logger.info("SIMULATION: Motion detected")
+                    logger.info("SIMULÁCIA: Pohyb detekovaný")
                     self._send_sensor_update("motion", "DETECTED")
                     time.sleep(10)
             
@@ -364,15 +364,15 @@ class SecuritySender:
             sim_thread.start()
         
         try:
-            # Keep running until interrupted
+            # Bež, kým nie je prerušený
             while self.running:
                 time.sleep(1)
         except KeyboardInterrupt:
-            logger.info("Shutting down...")
+            logger.info("Vypínanie...")
             self.stop()
     
     def stop(self):
-        """Stop the security sender and clean up resources"""
+        """Zastavenie odosielateľa zabezpečenia a vyčistenie zdrojov"""
         self.running = False
         
         if self.camera:
@@ -381,7 +381,7 @@ class SecuritySender:
         if RPI_AVAILABLE:
             GPIO.cleanup()
         
-        logger.info("Security sender stopped")
+        logger.info("Odosielateľ zabezpečenia zastavený")
 
 if __name__ == "__main__":
     sender = SecuritySender()

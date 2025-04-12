@@ -1,4 +1,4 @@
-# Package initialization
+# Inicializácia balíka
 from app import MainApp
 
 if __name__ == '__main__':

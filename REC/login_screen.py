@@ -1,4 +1,4 @@
-# Package initialization
+# Inicializácia balíka
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
@@ -13,14 +13,14 @@ class LoginScreen(Screen):
         
         layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
         
-        # Title
+        # Nadpis
         layout.add_widget(Label(
             text="Security System Login",
             font_size=24,
             size_hint_y=0.2
         ))
         
-        # PIN entry keypad
+        # Vstupné pole pre PIN
         self.pin_input = ""
         self.pin_display = TextInput(
             multiline=False,
@@ -32,16 +32,16 @@ class LoginScreen(Screen):
         )
         layout.add_widget(self.pin_display)
         
-        # Keypad
+        # Klávesnica
         keypad_layout = GridLayout(cols=3, spacing=[10, 10], size_hint_y=0.5)
         
-        # Create number buttons
-        for i in range(1, 10):  # This creates buttons 1 through 9
+        # Vytvorenie tlačidiel s číslami
+        for i in range(1, 10):  # Vytvorí tlačidlá 1 až 9
             btn = Button(text=str(i), font_size=24)
             btn.bind(on_release=self.on_button_press)
             keypad_layout.add_widget(btn)
             
-        # Add clear, 0, and enter buttons
+        # Pridanie tlačidiel vymazať, 0 a enter
         btn_clear = Button(text="Clear", font_size=20)
         btn_clear.bind(on_release=self.on_clear)
         keypad_layout.add_widget(btn_clear)
@@ -56,7 +56,7 @@ class LoginScreen(Screen):
         
         layout.add_widget(keypad_layout)
         
-        # Status message
+        # Stavová správa
         self.status_label = Label(
             text="Enter PIN to access system",
             font_size=18,
@@ -66,15 +66,15 @@ class LoginScreen(Screen):
         
         self.add_widget(layout)
     
-    # Fix: This should be properly named to avoid conflict with Kivy's on_enter event
+    # Oprava: Toto by malo byť správne pomenované, aby sa predišlo konfliktu s udalosťou Kivy on_enter
     def on_enter_pressed(self, instance):
-        """Handle the Enter button press"""
+        """Spracuje stlačenie tlačidla Enter"""
         if validate_pin(self.pin_input):
-            print("DEBUG: PIN validated successfully, access granted")
+            print("DEBUG: PIN úspešne overený, prístup povolený")
             self.status_label.text = "Access granted"
             self.manager.current = 'main'
         else:
-            print(f"DEBUG: Invalid PIN entered: {self.pin_input}")
+            print(f"DEBUG: Zadaný neplatný PIN: {self.pin_input}")
             self.status_label.text = "Invalid PIN, please try again"
             self.pin_input = ""
             self.pin_display.text = ""
@@ -87,11 +87,11 @@ class LoginScreen(Screen):
         self.pin_input = ""
         self.pin_display.text = ""
     
-    # This is the Kivy event method that needs the correct signature
+    # Toto je metóda udalosti Kivy, ktorá potrebuje správnu signatúru
     def on_enter(self):
-        """Called when the screen is entered"""
-        print("DEBUG: Login screen entered")
-        # Reset the PIN input when returning to this screen
+        """Volá sa pri vstupe na obrazovku"""
+        print("DEBUG: Vstup na prihlasovaciu obrazovku")
+        # Pri návrate na túto obrazovku vynuluj vstup PIN
         self.pin_input = ""
         self.pin_display.text = ""
         self.status_label.text = "Enter PIN to access system"

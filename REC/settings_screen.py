@@ -1,11 +1,10 @@
-# Package initialization
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.spinner import Spinner
-# Change the relative import to an absolute import
+# Zmena relatívneho importu na absolútny import
 from config.settings import get_setting, update_setting, save_settings
 
 class SettingsScreen(Screen):
@@ -14,17 +13,17 @@ class SettingsScreen(Screen):
         
         layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
         
-        # Title
+        # Nadpis
         layout.add_widget(Label(
             text="System Settings",
             font_size=24,
             size_hint_y=0.1
         ))
         
-        # Settings form
+        # Formulár nastavení
         form_layout = BoxLayout(orientation='vertical', spacing=10, size_hint_y=0.7)
         
-        # Network settings
+        # Sieťové nastavenia
         network_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=0.4)
         network_layout.add_widget(Label(text="Network Settings", font_size=18))
         
@@ -63,11 +62,11 @@ class SettingsScreen(Screen):
         
         form_layout.add_widget(network_layout)
         
-        # Add other settings as needed
+        # Pridanie ďalších nastavení podľa potreby
         
         layout.add_widget(form_layout)
         
-        # Buttons
+        # Tlačidlá
         button_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=0.2)
         
         save_button = Button(text="Save Settings")
@@ -83,21 +82,21 @@ class SettingsScreen(Screen):
         self.add_widget(layout)
         
     def save_settings(self, instance):
-        """Save settings to file"""
+        """Uloženie nastavení do súboru"""
         try:
-            # Update network settings
+            # Aktualizácia sieťových nastavení
             network = get_setting("network", {})
             network["tcp_port"] = int(self.tcp_port.text)
             network["udp_port"] = int(self.udp_port.text)
             network["discovery_port"] = int(self.discovery_port.text)
             update_setting("network", network)
             
-            # Save all settings
+            # Uloženie všetkých nastavení
             save_settings()
-            print("DEBUG: Settings saved successfully")
+            print("DEBUG: Nastavenia úspešne uložené")
         except Exception as e:
-            print(f"ERROR: Failed to save settings: {e}")
+            print(f"ERROR: Zlyhalo uloženie nastavení: {e}")
         
     def go_back(self, instance):
-        """Return to main screen"""
+        """Návrat na hlavnú obrazovku"""
         self.manager.current = 'main'

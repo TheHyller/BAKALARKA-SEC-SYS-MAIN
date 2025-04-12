@@ -1,4 +1,4 @@
-# Package initialization
+# Inicializácia balíka
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
@@ -19,19 +19,19 @@ class NumericKeypad(GridLayout):
         self.callback = callback
         self.pin_input = ""
         
-        # Create text display
+        # Vytvorenie textového displeja
         self.display = TextInput(multiline=False, readonly=True, halign="center", font_size=24, password=True)
-        self.add_widget(BoxLayout(height=50))  # Spacer
+        self.add_widget(BoxLayout(height=50))  # Medzerník
         self.add_widget(self.display)
-        self.add_widget(BoxLayout(height=50))  # Spacer
+        self.add_widget(BoxLayout(height=50))  # Medzerník
         
-        # Create number buttons
+        # Vytvorenie tlačidiel s číslami
         for i in range(1, 10):
             btn = Button(text=str(i), font_size=24)
             btn.bind(on_release=self.on_button_press)
             self.add_widget(btn)
             
-        # Add clear, 0, and enter buttons
+        # Pridanie tlačidiel vymazať, 0 a potvrdiť
         btn_clear = Button(text="Clear", font_size=20)
         btn_clear.bind(on_release=self.on_clear)
         self.add_widget(btn_clear)
@@ -59,17 +59,17 @@ class MainScreen(Screen):
     def __init__(self, **kwargs):
         super(MainScreen, self).__init__(**kwargs)
         
-        # Create main layout
+        # Vytvorenie hlavného rozloženia
         layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
         
-        # Status label
+        # Stavový štítok
         self.status_label = Label(
             text="System Status: Inactive", 
             font_size=24,
             size_hint_y=0.2
         )
         
-        # Button layout
+        # Rozloženie tlačidiel
         button_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=0.2)
         
         self.toggle_button = Button(
@@ -87,7 +87,7 @@ class MainScreen(Screen):
         button_layout.add_widget(self.toggle_button)
         button_layout.add_widget(self.change_pin_button)
         
-        # Add navigation buttons
+        # Pridanie navigačných tlačidiel
         nav_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=0.2)
         
         dashboard_button = Button(
@@ -112,28 +112,28 @@ class MainScreen(Screen):
         nav_layout.add_widget(alerts_button)
         nav_layout.add_widget(settings_button)
         
-        # Sensor status area (simplified - now we have a dedicated dashboard)
+        # Oblasť stavu senzorov (zjednodušená - teraz máme samostatný dashboard)
         sensor_layout = BoxLayout(orientation='vertical', size_hint_y=0.4)
         sensor_layout.add_widget(Label(text="Recent Activity:", font_size=18, size_hint_y=0.2))
         self.sensor_list = GridLayout(cols=1, spacing=5)
         sensor_layout.add_widget(self.sensor_list)
         
-        # Add widgets to main layout
+        # Pridanie widgetov do hlavného rozloženia
         layout.add_widget(self.status_label)
         layout.add_widget(button_layout)
-        layout.add_widget(nav_layout)  # Add the navigation buttons
+        layout.add_widget(nav_layout)  # Pridanie navigačných tlačidiel
         layout.add_widget(sensor_layout)
         
         self.add_widget(layout)
         
-        # Start network listeners
+        # Spustenie sieťových poslucháčov
         self.start_listeners()
         
-        # Update UI with current state
+        # Aktualizácia UI s aktuálnym stavom
         self.update_ui()
         
     def start_listeners(self):
-        """Start network listeners for sensors"""
+        """Spustenie sieťových poslucháčov pre senzory"""
         self.tcp_listener = TCPListener()
         self.tcp_listener.add_callback(self.handle_sensor_data)
         self.tcp_listener.start()
@@ -147,19 +147,19 @@ class MainScreen(Screen):
         self.discovery_listener.start()
         
     def handle_sensor_data(self, data, address):
-        """Handle data received from sensors"""
-        print(f"DEBUG: Sensor data received: {data} from {address}")
-        # Parse sensor data and update UI
-        # For example: "SENSOR:front_door:OPEN"
+        """Spracovanie dát prijatých zo senzorov"""
+        print(f"DEBUG: Prijaté dáta zo senzora: {data} z {address}")
+        # Parsovanie dát zo senzora a aktualizácia UI
+        # Napríklad: "SENSOR:front_door:OPEN"
         Clock.schedule_once(lambda dt: self.update_sensor_ui(data, address), 0)
         
     def handle_discovery(self, data, address):
-        """Handle discovery messages"""
-        print(f"DEBUG: Discovery message received: {data} from {address}")
+        """Spracovanie správ objavovania"""
+        print(f"DEBUG: Prijatá správa objavovania: {data} z {address}")
         
     def update_sensor_ui(self, data, address):
-        """Update sensor UI with new data"""
-        # Example implementation - would be expanded in real app
+        """Aktualizácia UI senzora s novými dátami"""
+        # Príklad implementácie - bola by rozšírená v reálnej aplikácii
         try:
             sensor_label = Label(
                 text=f"Sensor data: {data} from {address[0]}",
@@ -168,10 +168,10 @@ class MainScreen(Screen):
             )
             self.sensor_list.add_widget(sensor_label)
         except Exception as e:
-            print(f"ERROR: Failed to update sensor UI: {e}")
+            print(f"ERROR: Zlyhala aktualizácia UI senzora: {e}")
         
     def update_ui(self):
-        """Update UI based on current system state"""
+        """Aktualizácia UI na základe aktuálneho stavu systému"""
         system_active = get_setting("system_active", False)
         
         if system_active:
@@ -181,10 +181,10 @@ class MainScreen(Screen):
             self.status_label.text = "System Status: INACTIVE"
             self.toggle_button.text = "Activate System"
             
-        print(f"DEBUG: UI updated, system active: {system_active}")
+        print(f"DEBUG: UI aktualizované, systém aktívny: {system_active}")
         
     def toggle_system(self, instance):
-        """Show PIN dialog to toggle system state"""
+        """Zobrazenie PIN dialógu na prepnutie stavu systému"""
         self.pin_popup = Popup(
             title='Enter PIN',
             size_hint=(0.8, 0.8),
@@ -196,22 +196,22 @@ class MainScreen(Screen):
         self.pin_popup.open()
         
     def validate_toggle_pin(self, pin_input):
-        """Validate PIN and toggle system if correct"""
+        """Overenie PIN-u a prepnutie systému, ak je správny"""
         if validate_pin(pin_input):
-            print("DEBUG: PIN validated successfully")
+            print("DEBUG: PIN úspešne overený")
             self.pin_popup.dismiss()
             
-            # Toggle system state
+            # Prepnutie stavu systému
             toggled = toggle_system_state()
-            print(f"DEBUG: System state toggled: {toggled}")
+            print(f"DEBUG: Stav systému prepnutý: {toggled}")
             
-            # Update UI
+            # Aktualizácia UI
             self.update_ui()
         else:
-            print(f"DEBUG: Invalid PIN entered: {pin_input}")
+            print(f"DEBUG: Zadaný neplatný PIN: {pin_input}")
             self.pin_popup.dismiss()
             
-            # Show error popup
+            # Zobrazenie chybového okna
             error_popup = Popup(
                 title='Error',
                 content=Label(text='Invalid PIN'),
@@ -220,7 +220,7 @@ class MainScreen(Screen):
             error_popup.open()
             
     def show_change_pin(self, instance):
-        """Show dialog to change PIN"""
+        """Zobrazenie dialógu na zmenu PIN-u"""
         self.pin_popup = Popup(
             title='Enter Current PIN',
             size_hint=(0.8, 0.8),
@@ -232,12 +232,12 @@ class MainScreen(Screen):
         self.pin_popup.open()
         
     def validate_current_pin(self, pin_input):
-        """Validate current PIN before allowing change"""
+        """Overenie aktuálneho PIN-u pred povolením zmeny"""
         if validate_pin(pin_input):
-            print("DEBUG: Current PIN validated, showing new PIN dialog")
+            print("DEBUG: Aktuálny PIN overený, zobrazujem dialóg nového PIN-u")
             self.pin_popup.dismiss()
             
-            # Show new PIN dialog
+            # Zobrazenie dialógu nového PIN-u
             self.new_pin_popup = Popup(
                 title='Enter New PIN',
                 size_hint=(0.8, 0.8),
@@ -248,10 +248,10 @@ class MainScreen(Screen):
             self.new_pin_popup.content = keypad
             self.new_pin_popup.open()
         else:
-            print(f"DEBUG: Invalid current PIN entered: {pin_input}")
+            print(f"DEBUG: Zadaný neplatný aktuálny PIN: {pin_input}")
             self.pin_popup.dismiss()
             
-            # Show error popup
+            # Zobrazenie chybového okna
             error_popup = Popup(
                 title='Error',
                 content=Label(text='Invalid PIN'),
@@ -260,14 +260,14 @@ class MainScreen(Screen):
             error_popup.open()
             
     def set_new_pin(self, new_pin):
-        """Set new PIN"""
+        """Nastavenie nového PIN-u"""
         if len(new_pin) >= 4:
-            print(f"DEBUG: Setting new PIN: {len(new_pin) * '*'}")
+            print(f"DEBUG: Nastavenie nového PIN-u: {len(new_pin) * '*'}")
             success = update_pin(new_pin)
             
             self.new_pin_popup.dismiss()
             
-            # Show confirmation popup
+            # Zobrazenie potvrdzovacieho okna
             message = 'PIN updated successfully' if success else 'Failed to update PIN'
             confirm_popup = Popup(
                 title='PIN Change',
@@ -276,10 +276,10 @@ class MainScreen(Screen):
             )
             confirm_popup.open()
         else:
-            print("DEBUG: New PIN too short")
+            print("DEBUG: Nový PIN je príliš krátky")
             self.new_pin_popup.dismiss()
             
-            # Show error popup
+            # Zobrazenie chybového okna
             error_popup = Popup(
                 title='Error',
                 content=Label(text='PIN must be at least 4 digits'),
@@ -287,15 +287,15 @@ class MainScreen(Screen):
             )
             error_popup.open()
     
-    # Add new navigation methods
+    # Pridanie nových navigačných metód
     def open_dashboard(self, instance):
-        """Open the sensor dashboard screen"""
+        """Otvorenie obrazovky dashboard senzorov"""
         self.manager.current = 'dashboard'
     
     def open_alerts(self, instance):
-        """Open the alerts history screen"""
+        """Otvorenie obrazovky histórie upozornení"""
         self.manager.current = 'alerts'
     
     def open_settings(self, instance):
-        """Open the settings screen"""
+        """Otvorenie obrazovky nastavení"""
         self.manager.current = 'settings'

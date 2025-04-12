@@ -12,7 +12,7 @@ import time
 from config.settings import get_sensor_devices, get_sensor_status, remove_sensor_device
 
 class SensorCard(BoxLayout):
-    """Widget for displaying a single sensor device"""
+    """Widget pre zobrazenie jedného zariadenia senzora"""
     
     def __init__(self, device_id, device_data, **kwargs):
         super(SensorCard, self).__init__(**kwargs)
@@ -23,10 +23,10 @@ class SensorCard(BoxLayout):
         self.padding = 10
         self.spacing = 5
         
-        # Add a border
+        # Pridanie okraja
         self.canvas.before.rgba = (0.8, 0.8, 0.8, 1)
         
-        # Device header
+        # Hlavička zariadenia
         header = BoxLayout(orientation='horizontal', size_hint_y=0.3)
         self.device_name = Label(
             text=device_data.get('name', 'Unknown Device'),
@@ -35,11 +35,11 @@ class SensorCard(BoxLayout):
             size_hint_x=0.7
         )
         
-        # Last seen time
+        # Čas posledného videnia
         last_seen = device_data.get('last_seen', '')
         if last_seen:
             try:
-                # Parse ISO format datetime
+                # Parsovanie ISO formátu dátumu a času
                 dt = datetime.fromisoformat(last_seen)
                 last_seen_text = dt.strftime("%Y-%m-%d %H:%M:%S")
             except ValueError:
@@ -56,7 +56,7 @@ class SensorCard(BoxLayout):
         header.add_widget(self.device_name)
         header.add_widget(self.last_seen_label)
         
-        # Device information
+        # Informácie o zariadení
         info = BoxLayout(orientation='horizontal', size_hint_y=0.3)
         ip_label = Label(
             text=f"IP: {device_data.get('ip', 'Unknown')}",
@@ -71,16 +71,16 @@ class SensorCard(BoxLayout):
         info.add_widget(ip_label)
         info.add_widget(id_label)
         
-        # Sensor status area
+        # Oblasť stavu senzora
         self.status_area = GridLayout(cols=3, size_hint_y=0.4)
         
-        # Add widgets to main layout
+        # Pridanie widgetov do hlavného rozloženia
         self.add_widget(header)
         self.add_widget(info)
         self.add_widget(self.status_area)
     
     def update_status(self, sensor_status):
-        """Update the sensor status display"""
+        """Aktualizácia zobrazenia stavu senzora"""
         self.status_area.clear_widgets()
         
         if not sensor_status:
@@ -88,24 +88,24 @@ class SensorCard(BoxLayout):
             return
             
         for sensor_type, data in sensor_status.items():
-            # Sensor type label
+            # Štítok typu senzora
             self.status_area.add_widget(Label(
                 text=sensor_type.capitalize(),
                 font_size=14
             ))
             
-            # Status label with color based on status
+            # Štítok stavu s farbou podľa stavu
             status = data.get('status', 'Unknown')
             status_label = Label(text=status, font_size=14)
             
             if status in ['OPEN', 'DETECTED', 'TRIGGERED', 'ALARM']:
-                status_label.color = (1, 0, 0, 1)  # Red for alert states
+                status_label.color = (1, 0, 0, 1)  # Červená pre stavové upozornenia
             elif status in ['CLOSED', 'CLEAR', 'NORMAL']:
-                status_label.color = (0, 1, 0, 1)  # Green for normal states
+                status_label.color = (0, 1, 0, 1)  # Zelená pre normálne stavy
             
             self.status_area.add_widget(status_label)
             
-            # Timestamp
+            # Časová pečiatka
             timestamp = data.get('timestamp', 0)
             if isinstance(timestamp, (int, float)):
                 time_str = datetime.fromtimestamp(timestamp).strftime("%H:%M:%S")
@@ -118,15 +118,15 @@ class SensorCard(BoxLayout):
             ))
 
 class DashboardScreen(Screen):
-    """Main dashboard screen showing all sensor devices"""
+    """Hlavná obrazovka dashboardu zobrazujúca všetky zariadenia senzorov"""
     
     def __init__(self, **kwargs):
         super(DashboardScreen, self).__init__(**kwargs)
         
-        # Create main layout
+        # Vytvorenie hlavného rozloženia
         layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
         
-        # Header
+        # Hlavička
         header = BoxLayout(orientation='horizontal', size_hint_y=0.1)
         header.add_widget(Label(
             text="Security System Dashboard",
@@ -150,7 +150,7 @@ class DashboardScreen(Screen):
         header.add_widget(refresh_button)
         header.add_widget(back_button)
         
-        # Sensors area (scrollable)
+        # Oblasť senzorov (s posúvaním)
         scroll_view = ScrollView(size_hint_y=0.9)
         self.sensors_layout = GridLayout(
             cols=1, 
@@ -162,31 +162,31 @@ class DashboardScreen(Screen):
         
         scroll_view.add_widget(self.sensors_layout)
         
-        # Add widgets to main layout
+        # Pridanie widgetov do hlavného rozloženia
         layout.add_widget(header)
         layout.add_widget(scroll_view)
         
         self.add_widget(layout)
         
-        # Store sensor cards by device ID
+        # Uloženie kariet senzorov podľa ID zariadenia
         self.sensor_cards = {}
         
-        # Schedule periodic updates
-        Clock.schedule_interval(self.update_dashboard, 5)  # Update every 5 seconds
+        # Naplánovanie pravidelných aktualizácií
+        Clock.schedule_interval(self.update_dashboard, 5)  # Aktualizácia každých 5 sekúnd
     
     def on_enter(self):
-        """Called when the screen is entered"""
+        """Volá sa pri vstupe na obrazovku"""
         self.refresh_dashboard()
     
     def refresh_dashboard(self, *args):
-        """Refresh the dashboard with current sensor data"""
-        print("DEBUG: Refreshing dashboard")
+        """Obnovenie dashboardu s aktuálnymi údajmi senzorov"""
+        print("DEBUG: Obnovovanie dashboardu")
         
-        # Get current devices and statuses
+        # Získanie aktuálnych zariadení a stavov
         devices = get_sensor_devices()
         statuses = get_sensor_status()
         
-        # Clear existing widgets if no devices
+        # Vyčistenie existujúcich widgetov, ak nie sú zariadenia
         if not devices:
             self.sensors_layout.clear_widgets()
             self.sensor_cards = {}
@@ -200,7 +200,7 @@ class DashboardScreen(Screen):
             self.sensors_layout.add_widget(no_sensors_label)
             return
             
-        # Remove any cards for devices that no longer exist
+        # Odstránenie kariet pre zariadenia, ktoré už neexistujú
         to_remove = []
         for device_id in self.sensor_cards:
             if device_id not in devices:
@@ -211,14 +211,14 @@ class DashboardScreen(Screen):
                 self.sensors_layout.remove_widget(self.sensor_cards[device_id])
             del self.sensor_cards[device_id]
         
-        # Update or add cards for each device
+        # Aktualizácia alebo pridanie kariet pre každé zariadenie
         for device_id, device_data in devices.items():
-            # Check if device was seen in the last hour
+            # Kontrola, či bolo zariadenie videné v poslednej hodine
             if 'last_seen' in device_data:
                 try:
                     last_seen = datetime.fromisoformat(device_data['last_seen'])
                     now = datetime.now()
-                    # Skip devices not seen in last hour
+                    # Preskočenie zariadení, ktoré neboli videné v poslednej hodine
                     if (now - last_seen).total_seconds() > 3600:
                         if device_id in self.sensor_cards:
                             self.sensors_layout.remove_widget(self.sensor_cards[device_id])
@@ -228,19 +228,19 @@ class DashboardScreen(Screen):
                     pass
             
             if device_id in self.sensor_cards:
-                # Update existing card
+                # Aktualizácia existujúcej karty
                 self.sensor_cards[device_id].update_status(statuses.get(device_id, {}))
             else:
-                # Create new card
+                # Vytvorenie novej karty
                 card = SensorCard(device_id, device_data)
                 card.update_status(statuses.get(device_id, {}))
                 self.sensor_cards[device_id] = card
                 self.sensors_layout.add_widget(card)
     
     def update_dashboard(self, dt):
-        """Update the dashboard on timer"""
+        """Aktualizácia dashboardu na časovači"""
         self.refresh_dashboard()
     
     def go_back(self, instance):
-        """Return to main screen"""
+        """Návrat na hlavnú obrazovku"""
         self.manager.current = 'main'

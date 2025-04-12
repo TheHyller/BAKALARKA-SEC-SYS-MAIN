@@ -5,16 +5,16 @@ from main_screen import MainScreen
 from login_screen import LoginScreen
 from settings_screen import SettingsScreen
 from alerts_screen import AlertsScreen
-from dashboard_screen import DashboardScreen  # New import
+from dashboard_screen import DashboardScreen  # Nový import
 from listeners import DiscoveryListener, UDPListener, TCPListener
 
 class MainApp(App):
     def build(self):
-        # Load application settings
+        # Načítanie nastavení aplikácie
         settings = load_settings()
-        print("DEBUG: Application starting with loaded settings")
+        print("DEBUG: Aplikácia sa spúšťa s načítanými nastaveniami")
         
-        # Start listeners
+        # Spustenie poslucháčov
         self.discovery_listener = DiscoveryListener()
         self.discovery_listener.start()
         
@@ -24,23 +24,23 @@ class MainApp(App):
         self.tcp_listener = TCPListener()
         self.tcp_listener.start()
         
-        print("DEBUG: Network listeners started for sensor communication")
+        print("DEBUG: Sieťoví poslucháči spustení pre komunikáciu so senzormi")
         
-        # Create screen manager
+        # Vytvorenie správcu obrazoviek
         sm = ScreenManager()
         sm.add_widget(LoginScreen(name='login'))
         sm.add_widget(MainScreen(name='main'))
         sm.add_widget(SettingsScreen(name='settings'))
         sm.add_widget(AlertsScreen(name='alerts'))
-        sm.add_widget(DashboardScreen(name='dashboard'))  # Add new dashboard screen
+        sm.add_widget(DashboardScreen(name='dashboard'))  # Pridanie novej obrazovky dashboardu
         
-        # Set the initial screen
+        # Nastavenie počiatočnej obrazovky
         sm.current = 'login'
         
         return sm
     
     def on_stop(self):
-        # Stop listeners when app closes
+        # Zastavenie poslucháčov pri zatvorení aplikácie
         if hasattr(self, 'discovery_listener'):
             self.discovery_listener.stop()
         if hasattr(self, 'udp_listener'):
