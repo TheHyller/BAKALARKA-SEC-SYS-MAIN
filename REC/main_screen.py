@@ -65,19 +65,11 @@ class MainScreen(Screen):
         # Vytvorenie hlavného rozloženia
         layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
         
-        # Logo a názov aplikácie
+        # Header with title and status
         header_layout = BoxLayout(orientation='horizontal', size_hint_y=0.15)
         
-        # Logo - use our created logo
-        logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
-                               "assets", "security_logo.png")
-        logo = Image(
-            source=logo_path,
-            size_hint_x=0.3
-        )
-        
-        # Názov a stavový štítok
-        title_layout = BoxLayout(orientation='vertical', size_hint_x=0.7)
+        # Názov a stavový štítok - now taking full width
+        title_layout = BoxLayout(orientation='vertical', size_hint_x=1.0)
         title_layout.add_widget(Label(
             text="Home Security System", 
             font_size=28,
@@ -92,7 +84,6 @@ class MainScreen(Screen):
         )
         title_layout.add_widget(self.status_label)
         
-        header_layout.add_widget(logo)
         header_layout.add_widget(title_layout)
         layout.add_widget(header_layout)
         

@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Security System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .login-container {
+        max-width: 400px;
+        margin: 100px auto;
+        padding: 30px;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        position: relative;
+        z-index: 1;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        backface-visibility: hidden;
+    }
+    .login-title {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .login-button {
+        width: 100%;
+        margin-top: 20px;
+    }
+    .keypad {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin: 20px 0;
+    }
+    .keypad-button {
+        padding: 15px;
+        font-size: 20px;
+        border-radius: 5px;
+        border: 1px solid #dee2e6;
+        background-color: white;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        backface-visibility: hidden;
+        position: relative;
+        overflow: hidden;
+    }
+    .keypad-button:hover {
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+        transform: translateZ(0);
+    }
+    .pin-display {
+        text-align: center;
+        font-size: 24px;
+        letter-spacing: 5px;
+        margin-bottom: 20px;
+        height: 40px;
+        line-height: 40px;
+        min-height: 40px;
+        overflow: hidden;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <h2 class="login-title">Security System</h2>
+
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" id="login-form" action="{{ url_for('login') }}">
+        <div class="pin-display" id="pin-display">****</div>
+        
+        <div class="keypad">
+            <button type="button" class="keypad-button" data-value="1">1</button>
+            <button type="button" class="keypad-button" data-value="2">2</button>
+            <button type="button" class="keypad-button" data-value="3">3</button>
+            <button type="button" class="keypad-button" data-value="4">4</button>
+            <button type="button" class="keypad-button" data-value="5">5</button>
+            <button type="button" class="keypad-button" data-value="6">6</button>
+            <button type="button" class="keypad-button" data-value="7">7</button>
+            <button type="button" class="keypad-button" data-value="8">8</button>
+            <button type="button" class="keypad-button" data-value="9">9</button>
+            <button type="button" class="keypad-button" data-value="clear">Clear</button>
+            <button type="button" class="keypad-button" data-value="0">0</button>
+            <button type="button" class="keypad-button" data-value="enter">Enter</button>
+        </div>
+        <input type="hidden" id="pin-input" name="pin" value="">
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let pin = '';
+        const maxPinLength = 8;
+        const pinDisplay = document.getElementById('pin-display');
+        const pinInput = document.getElementById('pin-input');
+        const loginForm = document.getElementById('login-form');
+        
+        // Keypad buttons
+        document.querySelectorAll('.keypad-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const value = this.getAttribute('data-value');
+                
+                if (value === 'clear') {
+                    pin = '';
+                    updatePinDisplay();
+                } else if (value === 'enter') {
+                    if (pin.length >= 4) {
+                        pinInput.value = pin;
+                        loginForm.submit();
+                    }
+                } else {
+                    // Add digit if not at max length
+                    if (pin.length < maxPinLength) {
+                        pin += value;
+                        updatePinDisplay();
+                    }
+                }
+            });
+        });
+        
+        // Update the PIN display with asterisks
+        function updatePinDisplay() {
+            pinDisplay.textContent = '*'.repeat(pin.length);
+        }
+        
+        // Also handle keyboard input
+        document.addEventListener('keydown', function(e) {
+            if (e.key >= '0' && e.key <= '9') {
+                if (pin.length < maxPinLength) {
+                    pin += e.key;
+                    updatePinDisplay();
+                }
+            } else if (e.key === 'Backspace') {
+                pin = pin.slice(0, -1);
+                updatePinDisplay();
+            } else if (e.key === 'Enter') {
+                if (pin.length >= 4) {
+                    pinInput.value = pin;
+                    loginForm.submit();
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

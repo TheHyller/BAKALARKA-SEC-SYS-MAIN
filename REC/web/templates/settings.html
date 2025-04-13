@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Security System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- System Control Card -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">System Control</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h6>System Status:</h6>
+                    <span class="badge {% if system_active %}bg-success{% else %}bg-danger{% endif %} p-2">
+                        {% if system_active %}ACTIVE{% else %}INACTIVE{% endif %}
+                    </span>
+                </div>
+                
+                <form action="{{ url_for('settings_page') }}" method="post">
+                    <input type="hidden" name="toggle_system" value="1">
+                    <button type="submit" class="btn btn-lg w-100 {% if system_active %}btn-danger{% else %}btn-success{% endif %}">
+                        {% if system_active %}Deactivate{% else %}Activate{% endif %} Security System
+                    </button>
+                </form>
+                
+                <div class="alert alert-info mt-4">
+                    <small>
+                        {% if system_active %}
+                        The security system is currently active and will generate alerts when sensors detect activity.
+                        {% else %}
+                        The security system is currently inactive. No alerts will be generated until you activate the system.
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PIN Management Card -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">PIN Management</h5>
+            </div>
+            <div class="card-body">
+                <p>Change your system access PIN:</p>
+                
+                <form id="change-pin-form" class="mt-3" action="/settings/change-pin" method="post">
+                    <div class="mb-3">
+                        <label for="current-pin" class="form-label">Current PIN</label>
+                        <input type="password" class="form-control" id="current-pin" name="current_pin" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="new-pin" class="form-label">New PIN</label>
+                        <input type="password" class="form-control" id="new-pin" name="new_pin" required 
+                               minlength="4" maxlength="8">
+                        <div class="form-text">PIN must be 4-8 digits</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="confirm-pin" class="form-label">Confirm New PIN</label>
+                        <input type="password" class="form-control" id="confirm-pin" name="confirm_pin" required
+                               minlength="4" maxlength="8">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Change PIN</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Network Settings Card -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Network Settings</h5>
+            </div>
+            <div class="card-body">
+                <form action="/settings/network" method="post">
+                    <div class="mb-3">
+                        <label for="tcp-port" class="form-label">TCP Port</label>
+                        <input type="number" class="form-control" id="tcp-port" name="tcp_port" 
+                               value="8080" min="1024" max="65535">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="udp-port" class="form-label">UDP Port</label>
+                        <input type="number" class="form-control" id="udp-port" name="udp_port" 
+                               value="8081" min="1024" max="65535">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="discovery-port" class="form-label">Discovery Port</label>
+                        <input type="number" class="form-control" id="discovery-port" name="discovery_port" 
+                               value="8082" min="1024" max="65535">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" disabled>Save Network Settings</button>
+                    <small class="text-muted d-block mt-2">Network settings can only be changed from the desktop application</small>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alert Settings Card -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Alert Settings</h5>
+            </div>
+            <div class="card-body">
+                <form action="/settings/alerts" method="post">
+                    <div class="mb-3 form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="alert-sound" name="alert_sound" checked>
+                        <label class="form-check-label" for="alert-sound">Alert Sound</label>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notification-type" class="form-label">Notification Type</label>
+                        <select class="form-select" id="notification-type" name="notification_type">
+                            <option value="Visual">Visual</option>
+                            <option value="Visual + Sound" selected>Visual + Sound</option>
+                            <option value="Full Screen">Full Screen</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="retention-days" class="form-label">Alert History Retention (days)</label>
+                        <input type="number" class="form-control" id="retention-days" name="retention_days" 
+                               value="30" min="1" max="365">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" disabled>Save Alert Settings</button>
+                    <small class="text-muted d-block mt-2">Alert settings can only be changed from the desktop application</small>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const changePinForm = document.getElementById('change-pin-form');
+        if (changePinForm) {
+            changePinForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const newPin = document.getElementById('new-pin').value;
+                const confirmPin = document.getElementById('confirm-pin').value;
+                
+                if (newPin !== confirmPin) {
+                    alert('New PIN and confirmation do not match');
+                    return;
+                }
+                
+                // For demo purposes, just show an alert
+                alert('PIN change functionality is disabled in the web interface. Please use the desktop application to change your PIN.');
+            });
+        }
+    });
+</script>
+{% endblock %}

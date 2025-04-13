@@ -1,12 +1,18 @@
 import os
 import json
 import time
+import logging
 from datetime import datetime
 from flask import Flask, request, jsonify, send_file
-from threading import Thread
+from threading import Thread, Event
+from werkzeug.serving import make_server
 from config.settings import (get_setting, get_alerts, mark_alert_as_read, 
                            get_sensor_devices, get_sensor_status, toggle_system_state, 
                            validate_pin)
+
+# Disable Flask's default logging to reduce console spam
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 class MobileApiServer:
     """API Server for the mobile companion app"""
@@ -22,7 +28,9 @@ class MobileApiServer:
         self.port = port
         self.app = Flask(__name__)
         self.running = False
+        self.server = None
         self.server_thread = None
+        self.shutdown_event = Event()
         self.setup_routes()
     
     def setup_routes(self):
@@ -253,16 +261,36 @@ class MobileApiServer:
             return
         
         def run_server():
-            self.app.run(host=self.host, port=self.port, debug=False, use_reloader=False)
+            """Function to run the server in a separate thread"""
+            # Create a proper WSGI server instead of using app.run()
+            self.server = make_server(self.host, self.port, self.app, threaded=True)
+            self.server.timeout = 0.5  # Short timeout to handle shutdown requests
+            
+            # Run the server until shutdown event is set
+            while not self.shutdown_event.is_set():
+                self.server.handle_request()
         
+        # Reset shutdown event
+        self.shutdown_event.clear()
+        
+        # Start server in a daemon thread
         self.server_thread = Thread(target=run_server)
         self.server_thread.daemon = True
         self.server_thread.start()
         self.running = True
+        
         print(f"Mobile API server started on {self.host}:{self.port}")
     
     def stop(self):
         """Stop the API server"""
+        if not self.running:
+            return
+            
+        # Signal shutdown and wait for the server to stop
+        self.shutdown_event.set()
+        if self.server_thread:
+            self.server_thread.join(timeout=2.0)
+            
         self.running = False
         print("Mobile API server stopped")
 

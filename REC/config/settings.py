@@ -11,7 +11,8 @@ DEFAULT_SETTINGS = {
     "network": {
         "tcp_port": 8080,
         "udp_port": 8081,
-        "discovery_port": 8082
+        "discovery_port": 8082,
+        "web_port": 8090
     },
     "alerts": {
         "sound_enabled": True,

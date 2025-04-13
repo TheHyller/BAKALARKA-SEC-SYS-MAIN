@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Security System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- System Status Card -->
+    <div class="col-md-12 mb-4">
+        <div class="card" id="status-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">System Status</h5>
+                <span class="badge {% if system_active %}bg-success{% else %}bg-danger{% endif %}">
+                    {% if system_active %}ACTIVE{% else %}INACTIVE{% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <h4>Status</h4>
+                        <p class="{% if system_active %}system-active{% else %}system-inactive{% endif %}" id="system-status-text">
+                            {% if system_active %}ACTIVE{% else %}INACTIVE{% endif %}
+                        </p>
+                        <button id="toggle-system-btn" class="btn {% if system_active %}btn-danger{% else %}btn-success{% endif %}">
+                            {% if system_active %}Deactivate{% else %}Activate{% endif %} System
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <h4>Devices</h4>
+                        <p id="device-count">{{ active_devices }} active out of {{ total_devices }} total</p>
+                        <a href="{{ url_for('sensors_page') }}" class="btn btn-primary">View Devices</a>
+                    </div>
+                    <div class="col-md-4">
+                        <h4>Alerts</h4>
+                        <p id="alert-count">{{ unread_alerts }} unread out of {{ total_alerts }} total</p>
+                        <a href="{{ url_for('alerts_page') }}" class="btn btn-primary">View Alerts</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Alerts Card -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Recent Alerts</h5>
+                <a href="{{ url_for('alerts_page') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% if alerts %}
+                        {% for alert in alerts %}
+                        <div class="list-group-item {% if not alert.read %}alert-unread{% endif %}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ alert.device_name }}</h6>
+                                <small>{{ alert.timestamp }}</small>
+                            </div>
+                            <p class="mb-1">{{ alert.sensor_type|capitalize }} sensor {{ alert.status }}</p>
+                            {% if not alert.read %}
+                            <span class="badge bg-info">New</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="list-group-item">
+                            <p class="mb-0 text-center">No recent alerts</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device Status Card -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Device Status</h5>
+                <a href="{{ url_for('sensors_page') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% if devices %}
+                        {% for device_id, device in devices.items() %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ device.name }}</h6>
+                                {% if 'last_seen' in device %}
+                                    {% set last_seen = device.last_seen|string %}
+                                    {% if 'T' in last_seen %}
+                                        {% set last_seen_time = last_seen.split('T')|last|replace('Z', '') %}
+                                        {% set last_seen_date = last_seen.split('T')|first %}
+                                        <small>{{ last_seen_date }} {{ last_seen_time }}</small>
+                                    {% else %}
+                                        <small>{{ last_seen }}</small>
+                                    {% endif %}
+                                {% else %}
+                                    <small>Never seen</small>
+                                {% endif %}
+                            </div>
+                            <p class="mb-1">
+                                {% if 'last_seen' in device %}
+                                    {% set last_seen_timestamp = device.last_seen|string %}
+                                    {% if 'T' in last_seen_timestamp %}
+                                        {% set active = false %}
+                                        {% if now() and datetime %}
+                                            {% set active = ((now().timestamp() - datetime.fromisoformat(last_seen_timestamp).timestamp()) < 3600) %}
+                                        {% endif %}
+                                        <span class="badge {% if active %}bg-success{% else %}bg-danger{% endif %}">
+                                            {% if active %}Active{% else %}Offline{% endif %}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Unknown</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-danger">Never connected</span>
+                                {% endif %}
+                                
+                                IP: {{ device.ip|default('Unknown') }}
+                            </p>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="list-group-item">
+                            <p class="mb-0 text-center">No devices connected</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Toggle system status
+    document.getElementById('toggle-system-btn').addEventListener('click', function() {
+        // Disable button during API call
+        const toggleBtn = this;
+        toggleBtn.disabled = true;
+        
+        // Call the API to toggle system status
+        fetch('/api/toggle', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update UI to reflect new status
+                const statusText = document.getElementById('system-status-text');
+                const statusBadge = document.querySelector('#status-card .badge');
+                
+                if (data.system_active) {
+                    statusText.innerText = 'ACTIVE';
+                    statusText.className = 'system-active';
+                    statusBadge.innerText = 'ACTIVE';
+                    statusBadge.className = 'badge bg-success';
+                    toggleBtn.innerText = 'Deactivate System';
+                    toggleBtn.className = 'btn btn-danger';
+                } else {
+                    statusText.innerText = 'INACTIVE';
+                    statusText.className = 'system-inactive';
+                    statusBadge.innerText = 'INACTIVE';
+                    statusBadge.className = 'badge bg-danger';
+                    toggleBtn.innerText = 'Activate System';
+                    toggleBtn.className = 'btn btn-success';
+                }
+            } else {
+                alert('Failed to toggle system status: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error toggling system:', error);
+            alert('An error occurred while toggling the system status.');
+        })
+        .finally(() => {
+            toggleBtn.disabled = false;
+        });
+    });
+
+    // Auto-refresh dashboard data every 30 seconds
+    function refreshDashboardData() {
+        setInterval(function() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    // Update UI with fresh data
+                    document.getElementById('system-status-text').innerText = 
+                        data.system_active ? 'ACTIVE' : 'INACTIVE';
+                    document.getElementById('system-status-text').className = 
+                        data.system_active ? 'system-active' : 'system-inactive';
+                    
+                    document.getElementById('device-count').innerText = 
+                        `${data.devices.active} active out of ${data.devices.total} total`;
+                    
+                    document.getElementById('alert-count').innerText = 
+                        `${data.alerts.unread} unread out of ${data.alerts.total} total`;
+                    
+                    // Safely check the total alerts difference
+                    try {
+                        const currentTotal = parseInt('{{ total_alerts }}', 10);
+                        if (!isNaN(currentTotal) && data.alerts.total > currentTotal + 3) {
+                            window.location.reload();
+                        }
+                    } catch(e) {
+                        console.error('Error comparing alert counts:', e);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error refreshing dashboard:', error);
+                });
+        }, 30000);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        refreshDashboardData();
+    });
+</script>
+{% endblock %}

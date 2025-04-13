@@ -83,6 +83,7 @@ REC komponent poskytuje:
 4. Trvalé ukladanie nastavení a stavu zariadenia
 5. Autentifikáciu prostredníctvom PIN kódu
 6. Prehľadnú prístrojovú dosku pre rýchle monitorovanie všetkých zariadení
+7. Webové rozhranie pre vzdialený prístup k monitorovaniu a konfigurácii
 
 ### Podrobná Analýza Kódu
 
@@ -442,6 +443,103 @@ Detaily implementácie:
 - Poskytuje okamžitú spätnú väzbu pri zlyhaniach autentifikácie
 - Validuje voči šifrovanému alebo hašovanému PIN kódu v nastaveniach
 
+### Webové Rozhranie (`web_app.py`)
+
+Systém poskytuje webové rozhranie pre vzdialený prístup:
+
+```python
+def create_web_app():
+    """Vytvorenie Flask webovej aplikácie"""
+    app = Flask(__name__, 
+                template_folder=os.path.join(os.path.dirname(__file__), 'web/templates'),
+                static_folder=os.path.join(os.path.dirname(__file__), 'web/static'))
+    app.secret_key = 'security_system_secret_key'  # Pre správu relácie
+    
+    @app.route('/')
+    def index():
+        """Hlavná trasa - presmerovanie na prihlásenie alebo prístrojovú dosku"""
+        if 'logged_in' in session and session['logged_in']:
+            return redirect(url_for('dashboard'))
+        return redirect(url_for('login'))
+        
+    @app.route('/login', methods=['GET', 'POST'])
+    def login():
+        """Prihlasovacia stránka s odoslaním formulára"""
+        error = None
+        # Spracovanie prihlásenia...
+        
+    @app.route('/dashboard')
+    @login_required
+    def dashboard():
+        """Prístrojová doska so stavom zariadení"""
+        devices = get_devices()
+        system_active = get_setting('system_active', False)
+        return render_template('dashboard.html', 
+                              devices=devices, 
+                              system_active=system_active)
+    
+    # Ďalšie trasy...
+    
+    return app
+```
+
+Detaily implementácie:
+- Používa framework Flask pre ľahké vytváranie webových rozhraní
+- Implementuje správu relácií pre bezpečnú autentifikáciu
+- Obsahuje rozhrania API pre mobilné aplikácie alebo iné klientské aplikácie
+- Používa šablóny pre konzistentnú prezentáciu údajov
+- Implementuje zabezpečené trasy s dekorátorom `@login_required`
+- Používa Bootstrap pre responzívny dizajn vhodný pre mobily aj počítače
+
+#### Rozhranie Mobilného API (`mobile_api.py`)
+
+Systém poskytuje API rozhranie pre mobilné aplikácie:
+
+```python
+def register_mobile_api(app):
+    """Registrácia trás API pre mobilnú aplikáciu na Flask aplikácii"""
+    
+    @app.route('/api/login', methods=['POST'])
+    def api_login():
+        """API koncový bod pre prihlásenie z mobilnej aplikácie"""
+        data = request.get_json()
+        if not data or 'pin' not in data:
+            return jsonify({'error': 'Chýbajúce prihlasovacie údaje'}), 400
+            
+        pin = data['pin']
+        if validate_pin(pin):
+            token = generate_auth_token()
+            # Uloženie tokenu pre budúce požiadavky
+            return jsonify({'success': True, 'token': token})
+        
+        return jsonify({'error': 'Neplatné prihlasovacie údaje'}), 401
+        
+    @app.route('/api/devices', methods=['GET'])
+    @api_auth_required
+    def api_get_devices():
+        """API koncový bod pre získanie zoznamu zariadení"""
+        devices = get_devices()
+        return jsonify({'devices': devices})
+        
+    @app.route('/api/alerts', methods=['GET'])
+    @api_auth_required
+    def api_get_alerts():
+        """API koncový bod pre získanie zoznamu upozornení"""
+        start = request.args.get('start', 0, type=int)
+        limit = request.args.get('limit', 20, type=int)
+        alerts = get_alerts(start, limit)
+        return jsonify({'alerts': alerts})
+        
+    # Ďalšie API koncové body...
+```
+
+Detaily implementácie:
+- Používa RESTful dizajn API pre štandardizovanú komunikáciu
+- Implementuje autentifikáciu založenú na tokenoch pre bezpečný mobilný prístup
+- Poskytuje filtrovanie a stránkovanie pre efektívne načítanie údajov
+- Vracia odpovede JSON pre ľahkú integráciu s mobilnými platformami
+- Obsahuje správu chýb a validáciu vstupu pre robustnosť
+
 ## Tok Dát
 
 ### Spracovanie Udalostí Senzorov
@@ -503,6 +601,23 @@ if get_setting("system_active", False):
     # Vytvorenie upozornenia
     alerts_screen = self.manager.get_screen('alerts')
     alerts_screen.add_alert(f"{sensor_type.capitalize()} senzor aktivovaný", timestamp)
+```
+
+9. **Zvukové Upozornenia**: Prehratie zvuku alarmu pre kritické upozornenia
+```python
+# V SoundManager
+def play_alarm():
+    """Prehrá zvuk alarmu"""
+    if self.sound:
+        self.sound.play()
+```
+
+10. **Notifikácie**: Odoslanie upozornení prostredníctvom notifikačnej služby
+```python
+# V NotificationService
+def send_notification(title, message):
+    """Odosiela notifikáciu prostredníctvom nakonfigurovaných kanálov"""
+    # Odoslanie e-mailu, SMS alebo push notifikácie
 ```
 
 ### Tok Zachytávania Obrázkov
@@ -577,6 +692,7 @@ if header.startswith("IMAGE:"):
 
 4. **Ukladanie Obrázkov**: Obrázok uložený v REC komponente
 5. **Aktualizácia Upozornení**: Príslušné upozornenia aktualizované s referenciou na obrázok
+6. **Webové Rozhranie**: Obrázok dostupný prostredníctvom webového rozhrania v galérii obrázkov
 
 ### Tok Konfigurácie Systému
 
@@ -607,6 +723,80 @@ def save_settings(self, instance):
    - Pre niektoré nastavenia môže byť potrebný reštart komponentov
    - Sieťoví poslucháči zvyčajne potrebujú reštart s novými nastaveniami portov
 
+4. **Vysielanie Zmien Nastavení**: Odoslanie aktualizácií do SEND zariadení
+```python
+def broadcast_settings_update(self):
+    """Odosiela aktualizácie nastavení do všetkých známych zariadení"""
+    devices = get_known_devices()
+    updated_settings = get_shared_settings()
+    
+    for device in devices:
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            message = f"SETTINGS_UPDATE:{json.dumps(updated_settings)}"
+            sock.sendto(message.encode(), (device['ip'], device['udp_port']))
+        except Exception as e:
+            logger.error(f"Nepodarilo sa odoslať aktualizáciu nastavení zariadeniu {device['id']}: {e}")
+        finally:
+            sock.close()
+```
+
+## Témy a Prispôsobenie Používateľského Rozhrania (`theme_helper.py`)
+
+Systém podporuje rôzne témy a personalizáciu používateľského rozhrania:
+
+```python
+class ThemeManager:
+    """Správca tém pre aplikáciu"""
+    
+    def __init__(self):
+        self.themes = {
+            'light': {
+                'background_color': [0.95, 0.95, 0.95, 1],
+                'text_color': [0.2, 0.2, 0.2, 1],
+                'primary_color': [0.2, 0.5, 0.8, 1],
+                'accent_color': [0.8, 0.2, 0.2, 1],
+                'card_color': [1, 1, 1, 1]
+            },
+            'dark': {
+                'background_color': [0.1, 0.1, 0.1, 1],
+                'text_color': [0.9, 0.9, 0.9, 1],
+                'primary_color': [0.3, 0.6, 0.9, 1],
+                'accent_color': [0.9, 0.3, 0.3, 1],
+                'card_color': [0.2, 0.2, 0.2, 1]
+            }
+        }
+        
+        # Načítanie aktuálnej témy z nastavení
+        self.current_theme = get_setting('ui.theme', 'light')
+        
+    def get_theme_color(self, color_name):
+        """Získa farbu z aktuálnej témy"""
+        theme = self.themes.get(self.current_theme, self.themes['light'])
+        return theme.get(color_name, [0, 0, 0, 1])
+        
+    def apply_theme_to_widget(self, widget):
+        """Aplikuje aktuálnu tému na widget"""
+        if hasattr(widget, 'background_color'):
+            widget.background_color = self.get_theme_color('background_color')
+            
+        if hasattr(widget, 'color'):
+            widget.color = self.get_theme_color('text_color')
+            
+        # Rekurzívne aplikovanie témy na podwidgety
+        if hasattr(widget, 'children'):
+            for child in widget.children:
+                self.apply_theme_to_widget(child)
+                
+    def switch_theme(self, theme_name):
+        """Prepne na inú tému a uloží nastavenie"""
+        if theme_name in self.themes:
+            self.current_theme = theme_name
+            update_setting('ui.theme', theme_name)
+            return True
+        return False
+```
+
 ## Body Rozšírenia
 
 Systém je navrhnutý na rozšíriteľnosť:
@@ -615,15 +805,145 @@ Systém je navrhnutý na rozšíriteľnosť:
 2. **Vylepšená Autentifikácia**: Prihlasovacie systém by mohol byť rozšírený o viacfaktorovú autentifikáciu
 3. **Cloudová Integrácia**: Systém by mohol byť rozšírený o zálohovanie udalostí do cloudového úložiska
 4. **Mobilná Aplikácia**: Sprievodná mobilná aplikácia by mohla byť vyvinutá s použitím rovnakých protokolov
+5. **Integrácie s Tretími Stranami**: Systém by mohol byť rozšírený o integrácie s HomeKit, Google Home alebo Alexa
+6. **Analytika a Reportovanie**: Implementácia modelov strojového učenia pre odhalenie vzorov a identifikáciu falošných poplachov
+
+## Správa Zvukov (`sound_manager.py`)
+
+Systém zahŕňa správu zvukových oznámení a alarmov:
+
+```python
+class SoundManager:
+    """Trieda pre správu zvukových efektov a alarmov v systéme"""
+    
+    def __init__(self):
+        """Inicializácia správcu zvuku"""
+        self.sound = None
+        self.muted = get_setting('audio.muted', False)
+        self.volume = get_setting('audio.volume', 1.0)
+        self._load_sounds()
+        
+    def _load_sounds(self):
+        """Načítanie zvukových efektov"""
+        try:
+            sound_file = os.path.join(os.path.dirname(__file__), 'assets/alarm.wav')
+            self.sound = SoundLoader.load(sound_file)
+            if self.sound:
+                self.sound.volume = 0 if self.muted else self.volume
+        except Exception as e:
+            print(f"Chyba pri načítavaní zvuku: {e}")
+            
+    def play_alarm(self):
+        """Prehrá zvuk alarmu"""
+        if self.sound and not self.muted:
+            self.sound.play()
+            
+    def stop_alarm(self):
+        """Zastaví prehrávanie alarmu"""
+        if self.sound:
+            self.sound.stop()
+            
+    def set_volume(self, volume):
+        """Nastaví hlasitosť v rozsahu 0.0 - 1.0"""
+        self.volume = max(0.0, min(1.0, volume))
+        update_setting('audio.volume', self.volume)
+        if self.sound and not self.muted:
+            self.sound.volume = self.volume
+            
+    def toggle_mute(self):
+        """Prepne stav stlmenia zvuku"""
+        self.muted = not self.muted
+        update_setting('audio.muted', self.muted)
+        if self.sound:
+            self.sound.volume = 0 if self.muted else self.volume
+```
+
+## Služba Notifikácií (`notification_service.py`)
+
+Systém obsahuje službu pre odosielanie notifikácií cez rôzne kanály:
+
+```python
+class NotificationService:
+    """Služba pre odosielanie notifikácií na rôzne kanály"""
+    
+    def __init__(self):
+        """Inicializácia služby notifikácií"""
+        self.settings = get_setting('notifications', {})
+        self.enabled = self.settings.get('enabled', True)
+        
+    def send_notification(self, title, message, importance='normal'):
+        """Odosiela notifikáciu cez všetky nakonfigurované kanály"""
+        if not self.enabled:
+            return False
+            
+        success = False
+        
+        # Kontrola úrovne dôležitosti a filtrovanie notifikácií
+        min_importance = self.settings.get('min_importance', 'normal')
+        if not self._should_send(importance, min_importance):
+            return False
+            
+        # Odoslanie e-mailových notifikácií
+        if self.settings.get('email', {}).get('enabled', False):
+            email_success = self._send_email_notification(title, message)
+            success = success or email_success
+            
+        # Odoslanie SMS notifikácií
+        if self.settings.get('sms', {}).get('enabled', False):
+            sms_success = self._send_sms_notification(title, message)
+            success = success or sms_success
+            
+        # Odoslanie push notifikácií
+        if self.settings.get('push', {}).get('enabled', False):
+            push_success = self._send_push_notification(title, message)
+            success = success or push_success
+            
+        return success
+        
+    def _send_email_notification(self, title, message):
+        """Odosiela e-mailovú notifikáciu"""
+        # Implementácia odosielania e-mailu...
+        
+    def _send_sms_notification(self, title, message):
+        """Odosiela SMS notifikáciu"""
+        # Implementácia odosielania SMS...
+        
+    def _send_push_notification(self, title, message):
+        """Odosiela push notifikáciu na mobilné zariadenia"""
+        # Implementácia odosielania push notifikácie...
+        
+    def _should_send(self, importance, min_importance):
+        """Rozhodne, či by sa mala odoslať notifikácia na základe dôležitosti"""
+        importance_levels = {
+            'low': 0,
+            'normal': 1,
+            'high': 2,
+            'critical': 3
+        }
+        
+        current_level = importance_levels.get(importance, 1)
+        min_level = importance_levels.get(min_importance, 1)
+        
+        return current_level >= min_level
+```
 
 ## Záver
 
 Tento bezpečnostný systém poskytuje flexibilnú, rozšíriteľnú platformu pre domáce monitorovanie s viacerými senzormi a kamerami. Distribuovaná architektúra umožňuje umiestniť senzory po celom objekte pri zachovaní centralizovaného monitorovania a riadenia.
 
+Systém bol navrhnutý s dôrazom na:
+- **Modularitu**: Jasne definované komponenty s jednotlivými zodpovednosťami
+- **Rozšíriteľnosť**: Architektúra umožňujúca pridanie nových funkčností a integrácie
+- **Bezpečnosť**: Implementácia autentifikácie a zabezpečenia údajov
+- **Používateľskú skúsenosť**: Intuitívne používateľské rozhranie s responzívnym dizajnom
+- **Spoľahlivosť**: Robustné spracovanie chýb a mechanizmy obnovy
+
 Kód demonštruje niekoľko dôležitých princípov návrhu softvéru:
 - Oddelenie zodpovedností s jasnými zodpovednosťami komponentov
 - Architektúra riadená udalosťami pre responzívne používateľské rozhranie a integráciu hardvéru
-- Súbežnosť založená na vláknach pre sieťové operácie
+- Súbežnosť založená na vláknách pre sieťové operácie
 - Komponentový návrh používateľského rozhrania s opätovne použiteľnými prvkami
 - Perzistentná konfigurácia s predvolenými hodnotami a validáciou
 - Mechanizmy spracovávania chýb a obnovy pre robustnosť
+
+S týmito prvkami systém poskytuje komplexné a flexibilné riešenie pre domácu bezpečnosť s možnosťami ďalšieho vývoja a customizácie.

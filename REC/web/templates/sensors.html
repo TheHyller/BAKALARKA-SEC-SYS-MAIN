@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Sensors - Security System{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Connected Devices</h5>
+    </div>
+    <div class="card-body">
+        <div class="row row-cols-1 row-cols-md-2 g-4">
+            {% if sensors %}
+                {% for sensor in sensors %}
+                <div class="col">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">{{ sensor.name }}</h5>
+                                <span class="badge {% if sensor.active %}bg-success{% else %}bg-danger{% endif %}">
+                                    {% if sensor.active %}Active{% else %}Offline{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item">
+                                    <strong>Device ID:</strong> {{ sensor.id }}
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>IP Address:</strong> {{ sensor.ip }}
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Last Seen:</strong> {{ sensor.last_seen }}
+                                </li>
+                                
+                                {% if sensor.status %}
+                                <li class="list-group-item">
+                                    <strong>Sensors:</strong>
+                                    <ul class="list-unstyled mt-2">
+                                        {% for sensor_type, data in sensor.status.items() %}
+                                        <li class="mb-2">
+                                            <div class="d-flex justify-content-between">
+                                                <span><i class="bi bi-activity"></i> {{ sensor_type|capitalize }}</span>
+                                                <span class="badge {% if data.status == 'ALERT' %}bg-danger{% elif data.status == 'ACTIVE' %}bg-success{% else %}bg-secondary{% endif %}">
+                                                    {{ data.status }}
+                                                </span>
+                                            </div>
+                                            {% if data.value is defined %}
+                                            <small class="text-muted">Value: {{ data.value }}</small><br>
+                                            {% endif %}
+                                            {% if data.timestamp_str is defined %}
+                                            <small class="text-muted">Updated: {{ data.timestamp_str }}</small>
+                                            {% endif %}
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        <div class="card-footer">
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ url_for('images_page', sensor_type='motion') }}" class="btn btn-sm btn-outline-primary">View Images</a>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" disabled>Configure</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        No sensor devices are currently connected to the system.
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh every minute
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            window.location.reload();
+        }, 60000);
+    });
+</script>
+{% endblock %}

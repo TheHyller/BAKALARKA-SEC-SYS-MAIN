@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Captured Images - Security System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .image-card {
+        transition: transform 0.2s;
+    }
+    .image-card:hover {
+        transform: scale(1.02);
+    }
+    .image-gallery {
+        margin-top: 20px;
+    }
+    .sensor-type-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
+    }
+    .image-modal-container {
+        max-height: 80vh;
+        overflow: hidden;
+    }
+    .image-modal-container img {
+        max-height: 70vh;
+        object-fit: contain;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Captured Images</h5>
+            <div class="d-flex">
+                <div class="dropdown me-2">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        {% if current_filter %}{{ current_filter|capitalize }} Sensors{% else %}All Sensors{% endif %}
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item {% if not current_filter %}active{% endif %}" 
+                               href="{{ url_for('images_page') }}">All Sensors</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        {% for sensor_type in sensor_types %}
+                        <li><a class="dropdown-item {% if current_filter == sensor_type %}active{% endif %}" 
+                               href="{{ url_for('images_page', sensor_type=sensor_type) }}">
+                                {{ sensor_type|capitalize }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <button type="button" class="btn btn-outline-primary" onclick="window.location.reload()">
+                    Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if images %}
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 image-gallery">
+                {% for image in images %}
+                <div class="col">
+                    <div class="card h-100 image-card">
+                        <span class="badge bg-info sensor-type-badge">{{ image.sensor_type|capitalize }}</span>
+                        <img src="{{ image.path }}" class="card-img-top" alt="Security Image" 
+                             style="height: 200px; object-fit: cover;"
+                             onclick="showImageModal('{{ image.path }}', '{{ image.timestamp }}', '{{ image.sensor_type }}')">
+                        <div class="card-body">
+                            <h6 class="card-title">{{ image.filename }}</h6>
+                            <p class="card-text"><small class="text-muted">{{ image.timestamp }}</small></p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                No images found{% if current_filter %} for {{ current_filter }} sensors{% endif %}.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Image Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageModalLabel">Image Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center image-modal-container">
+                <img id="modalImage" src="" class="img-fluid" alt="Security Image">
+                <div class="mt-3">
+                    <p id="imageTimestamp" class="mb-1"></p>
+                    <span id="imageSensorType" class="badge bg-info"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a id="imageDownloadLink" href="#" class="btn btn-primary" download>Download</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function showImageModal(imagePath, timestamp, sensorType) {
+        document.getElementById('modalImage').src = imagePath;
+        document.getElementById('imageTimestamp').textContent = timestamp;
+        document.getElementById('imageSensorType').textContent = sensorType.charAt(0).toUpperCase() + sensorType.slice(1);
+        document.getElementById('imageDownloadLink').href = imagePath;
+        
+        const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+        modal.show();
+    }
+</script>
+{% endblock %}

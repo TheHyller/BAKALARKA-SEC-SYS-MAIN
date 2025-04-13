@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Security System{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 20px;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .navbar {
+            margin-bottom: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .system-active {
+            color: #198754;
+            font-weight: bold;
+        }
+        .system-inactive {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .alert-unread {
+            background-color: #f8f9fa;
+            border-left: 4px solid #0d6efd;
+        }
+        .sensor-active {
+            color: #198754;
+        }
+        .sensor-inactive {
+            color: #dc3545;
+        }
+        .sensor-warning {
+            color: #ffc107;
+        }
+        .footer {
+            margin-top: 30px;
+            padding: 20px 0;
+            border-top: 1px solid #dee2e6;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        {% if session.logged_in %}
+        <nav class="navbar navbar-expand-lg navbar-light">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="{{ url_for('dashboard') }}">Security System</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == url_for('dashboard') %}active{% endif %}" 
+                               href="{{ url_for('dashboard') }}">Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == url_for('sensors_page') %}active{% endif %}" 
+                               href="{{ url_for('sensors_page') }}">Sensors</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == url_for('alerts_page') %}active{% endif %}" 
+                               href="{{ url_for('alerts_page') }}">Alerts</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == url_for('images_page') %}active{% endif %}" 
+                               href="{{ url_for('images_page') }}">Images</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == url_for('settings_page') %}active{% endif %}" 
+                               href="{{ url_for('settings_page') }}">Settings</a>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+        {% endif %}
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="alert alert-info">
+            <ul class="mb-0">
+                {% for message in messages %}
+                <li>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Main Content -->
+        {% block content %}{% endblock %}
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="container">
+                <p>Security System Web Interface &copy; {{ now.year }}</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Common JavaScript for all pages
+        document.addEventListener('DOMContentLoaded', function() {
+            // Current date/time for templates
+            window.now = new Date();
+            
+            // Auto refresh status on dashboard
+            if (document.getElementById('status-card')) {
+                setInterval(refreshStatus, 30000); // Refresh every 30 seconds
+            }
+        });
+        
+        // Function to refresh system status via AJAX
+        function refreshStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    updateStatusUI(data);
+                })
+                .catch(error => console.error('Error refreshing status:', error));
+        }
+        
+        // Update UI elements with status data
+        function updateStatusUI(data) {
+            const statusText = document.getElementById('system-status-text');
+            if (statusText) {
+                statusText.innerText = data.system_active ? 'ACTIVE' : 'INACTIVE';
+                statusText.className = data.system_active ? 'system-active' : 'system-inactive';
+            }
+            
+            const deviceCount = document.getElementById('device-count');
+            if (deviceCount) {
+                deviceCount.innerText = `${data.devices.active} active out of ${data.devices.total} total`;
+            }
+            
+            const alertCount = document.getElementById('alert-count');
+            if (alertCount) {
+                alertCount.innerText = `${data.alerts.unread} unread out of ${data.alerts.total} total`;
+            }
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
