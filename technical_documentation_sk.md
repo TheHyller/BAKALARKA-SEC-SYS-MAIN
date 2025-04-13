@@ -82,6 +82,7 @@ REC komponent poskytuje:
 3. Sieťových poslucháčov pre rôzne komunikačné kanály
 4. Trvalé ukladanie nastavení a stavu zariadenia
 5. Autentifikáciu prostredníctvom PIN kódu
+6. Prehľadnú prístrojovú dosku pre rýchle monitorovanie všetkých zariadení
 
 ### Podrobná Analýza Kódu
 
@@ -94,28 +95,49 @@ class MainApp(App):
     def build(self):
         # Načítanie nastavení aplikácie
         settings = load_settings()
+        print("DEBUG: Aplikácia sa spúšťa s načítanými nastaveniami")
         
-        # Spustenie sieťových poslucháčov
+        # Spustenie poslucháčov
         self.discovery_listener = DiscoveryListener()
-        self.udp_listener = UDPListener()
-        self.tcp_listener = TCPListener()
+        self.discovery_listener.start()
         
-        # Inicializácia správcu obrazoviek so všetkými obrazovkami
+        self.udp_listener = UDPListener()
+        self.udp_listener.start()
+        
+        self.tcp_listener = TCPListener()
+        self.tcp_listener.start()
+        
+        print("DEBUG: Sieťoví poslucháči spustení pre komunikáciu so senzormi")
+        
+        # Vytvorenie správcu obrazoviek
         sm = ScreenManager()
         sm.add_widget(LoginScreen(name='login'))
         sm.add_widget(MainScreen(name='main'))
         sm.add_widget(SettingsScreen(name='settings'))
         sm.add_widget(AlertsScreen(name='alerts'))
-        sm.add_widget(DashboardScreen(name='dashboard'))
+        sm.add_widget(DashboardScreen(name='dashboard'))  # Pridanie obrazovky dashboardu
+        
+        # Nastavenie počiatočnej obrazovky
+        sm.current = 'login'
         
         return sm
+    
+    def on_stop(self):
+        # Zastavenie poslucháčov pri zatvorení aplikácie
+        if hasattr(self, 'discovery_listener'):
+            self.discovery_listener.stop()
+        if hasattr(self, 'udp_listener'):
+            self.udp_listener.stop()
+        if hasattr(self, 'tcp_listener'):
+            self.tcp_listener.stop()
 ```
 
 Kľúčové aspekty:
-- Aplikácia nasleduje dizajn frameworku Kivy s `ScreenManager` pre navigáciu
+- Aplikácia nasleduje dizajn frameworku Kivy s `ScreenManager` pre navigáciu medzi obrazovkami
 - Rozsiahlo sa používa vláknenie pre sieťovú komunikáciu (všetci poslucháči bežia v samostatných vláknach)
 - Zdroje sú správne spravované s inicializáciou v `build()` a čistením v `on_stop()`
 - Prechody medzi obrazovkami riadia tok aplikácie
+- Aplikácia obsahuje 5 hlavných obrazoviek: prihlásenie, hlavnú obrazovku, nastavenia, upozornenia a prístrojovú dosku
 
 #### Systém Upozornení (`alerts_screen.py`)
 

@@ -7,9 +7,24 @@ from settings_screen import SettingsScreen
 from alerts_screen import AlertsScreen
 from dashboard_screen import DashboardScreen  # Nový import
 from listeners import DiscoveryListener, UDPListener, TCPListener
+from kivy.core.text import LabelBase
+from kivy.core.window import Window
+from kivy.config import Config
 
 class MainApp(App):
     def build(self):
+        # Set theme to light mode with white background
+        Window.clearcolor = (1, 1, 1, 1)  # White background
+        self.theme_cls = {
+            'font_size_large': 28,
+            'font_size_medium': 22,
+            'font_size_small': 18,
+            'text_color': (0, 0, 0, 1),  # Black text
+            'background_color': (1, 1, 1, 1),  # White background
+            'button_color': (0.9, 0.9, 0.9, 1),  # Light grey for buttons
+            'accent_color': (0, 0.6, 1, 1)  # Blue accent color
+        }
+        
         # Načítanie nastavení aplikácie
         settings = load_settings()
         print("DEBUG: Aplikácia sa spúšťa s načítanými nastaveniami")
@@ -47,6 +62,11 @@ class MainApp(App):
             self.udp_listener.stop()
         if hasattr(self, 'tcp_listener'):
             self.tcp_listener.stop()
+
+# Configure Kivy for light theme and larger fonts
+Config.set('kivy', 'default_font', ['Roboto', 'data/fonts/Roboto-Regular.ttf', 'data/fonts/Roboto-Italic.ttf', 'data/fonts/Roboto-Bold.ttf', 'data/fonts/Roboto-BoldItalic.ttf'])
+Config.set('graphics', 'window_state', 'maximized')
+Config.write()
         
 if __name__ == '__main__':
     MainApp().run()

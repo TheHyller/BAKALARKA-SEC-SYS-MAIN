@@ -6,10 +6,13 @@ from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.popup import Popup
 from kivy.uix.image import Image
+from kivy.uix.carousel import Carousel
 from kivy.clock import Clock
-from datetime import datetime
+from kivy.graphics import Color, Rectangle
+from datetime import datetime, timedelta
 import time
-from config.settings import get_sensor_devices, get_sensor_status, remove_sensor_device
+import os
+from config.settings import get_sensor_devices, get_sensor_status, remove_sensor_device, get_setting
 
 class SensorCard(BoxLayout):
     """Widget pre zobrazenie jedného zariadenia senzora"""
@@ -19,15 +22,20 @@ class SensorCard(BoxLayout):
         self.device_id = device_id
         self.orientation = 'vertical'
         self.size_hint_y = None
-        self.height = 150
+        self.height = 200
         self.padding = 10
         self.spacing = 5
         
-        # Pridanie okraja
-        self.canvas.before.rgba = (0.8, 0.8, 0.8, 1)
+        # Pridanie pozadia a okraja
+        with self.canvas.before:
+            Color(0.9, 0.9, 0.95, 1)  # Svetlosivé pozadie
+            self.rect = Rectangle(pos=self.pos, size=self.size)
+        
+        # Keď sa zmení veľkosť widgetu, aktualizuj obdĺžnik
+        self.bind(pos=self._update_rect, size=self._update_rect)
         
         # Hlavička zariadenia
-        header = BoxLayout(orientation='horizontal', size_hint_y=0.3)
+        header = BoxLayout(orientation='horizontal', size_hint_y=0.2)
         self.device_name = Label(
             text=device_data.get('name', 'Unknown Device'),
             font_size=18,
@@ -57,7 +65,7 @@ class SensorCard(BoxLayout):
         header.add_widget(self.last_seen_label)
         
         # Informácie o zariadení
-        info = BoxLayout(orientation='horizontal', size_hint_y=0.3)
+        info = BoxLayout(orientation='horizontal', size_hint_y=0.15)
         ip_label = Label(
             text=f"IP: {device_data.get('ip', 'Unknown')}",
             font_size=14,
@@ -72,12 +80,61 @@ class SensorCard(BoxLayout):
         info.add_widget(id_label)
         
         # Oblasť stavu senzora
-        self.status_area = GridLayout(cols=3, size_hint_y=0.4)
+        sensor_status_layout = BoxLayout(orientation='horizontal', size_hint_y=0.4)
+        self.status_area = GridLayout(cols=3, spacing=5, size_hint_x=0.7)
+        
+        # Oblasť pre náhľad obrázka
+        self.image_preview = BoxLayout(orientation='vertical', size_hint_x=0.3)
+        self.preview_image = Image(
+            source='',  # Zatiaľ žiadny obrázok
+            size_hint=(1, 0.8),
+            allow_stretch=True,
+            keep_ratio=True
+        )
+        view_button = Button(
+            text="View Images",
+            size_hint=(1, 0.2),
+            font_size=12
+        )
+        view_button.bind(on_release=lambda btn: self.view_device_images())
+        
+        self.image_preview.add_widget(self.preview_image)
+        self.image_preview.add_widget(view_button)
+        
+        sensor_status_layout.add_widget(self.status_area)
+        sensor_status_layout.add_widget(self.image_preview)
+        
+        # Tlačidlá pre zariadenie
+        buttons = BoxLayout(orientation='horizontal', size_hint_y=0.2, spacing=5)
+        
+        refresh_btn = Button(
+            text="Refresh",
+            size_hint_x=0.5
+        )
+        refresh_btn.bind(on_release=lambda btn: self.request_refresh())
+        
+        remove_btn = Button(
+            text="Remove Device",
+            size_hint_x=0.5
+        )
+        remove_btn.bind(on_release=lambda btn: self.confirm_remove_device())
+        
+        buttons.add_widget(refresh_btn)
+        buttons.add_widget(remove_btn)
         
         # Pridanie widgetov do hlavného rozloženia
         self.add_widget(header)
         self.add_widget(info)
-        self.add_widget(self.status_area)
+        self.add_widget(sensor_status_layout)
+        self.add_widget(buttons)
+        
+        # Uchovanie callback pre obnovenie rodičovskej obrazovky
+        self.refresh_callback = None
+    
+    def _update_rect(self, instance, value):
+        """Aktualizácia obdĺžnika pri zmene veľkosti"""
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
     
     def update_status(self, sensor_status):
         """Aktualizácia zobrazenia stavu senzora"""
@@ -86,6 +143,9 @@ class SensorCard(BoxLayout):
         if not sensor_status:
             self.status_area.add_widget(Label(text="No sensor data available"))
             return
+        
+        # Načítanie najnovšieho obrázka
+        self._update_preview_image()
             
         for sensor_type, data in sensor_status.items():
             # Štítok typu senzora
@@ -116,6 +176,198 @@ class SensorCard(BoxLayout):
                 text=time_str,
                 font_size=12
             ))
+    
+    def _update_preview_image(self):
+        """Načítanie a zobrazenie najnovšieho obrázka zo zariadenia"""
+        try:
+            # Získanie cesty k obrázkam
+            storage_path = get_setting("images.storage_path", "captures")
+            
+            # Ak nie je absolútna cesta, vytvor cestu relatívnu k projektu
+            if not os.path.isabs(storage_path):
+                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                storage_path = os.path.join(base_dir, storage_path)
+                
+            # Kontrola, či adresár existuje
+            if not os.path.exists(storage_path):
+                return
+                
+            # Hľadanie najnovšieho obrázka pre toto zariadenie
+            device_name = self.device_name.text.split(":")[0].strip() if ":" in self.device_name.text else self.device_name.text
+            
+            # Filter súborov podľa prefixu senzora
+            matching_images = []
+            
+            for filename in os.listdir(storage_path):
+                # Hľadáme súbory spájané s týmto zariadením podľa prefixu (motion_, door_, window_)
+                if (filename.startswith(("motion_", "door_", "window_")) and 
+                    filename.endswith(('.jpg', '.jpeg', '.png'))):
+                    # Získanie úplnej cesty k súboru
+                    filepath = os.path.join(storage_path, filename)
+                    # Pridanie s časom vytvorenia súboru pre zoradenie
+                    matching_images.append((filepath, os.path.getmtime(filepath)))
+            
+            # Zoradenie podľa času (najnovšie prvé)
+            matching_images.sort(key=lambda x: x[1], reverse=True)
+            
+            # Zobrazenie najnovšieho obrázka, ak existuje
+            if matching_images:
+                self.preview_image.source = matching_images[0][0]
+            
+        except Exception as e:
+            print(f"ERROR: Zlyhalo načítanie náhľadového obrázka: {e}")
+            
+    def view_device_images(self):
+        """Zobrazenie všetkých obrázkov pre toto zariadenie"""
+        try:
+            # Získanie cesty k obrázkam
+            storage_path = get_setting("images.storage_path", "captures")
+            
+            # Ak nie je absolútna cesta, vytvor cestu relatívnu k projektu
+            if not os.path.isabs(storage_path):
+                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                storage_path = os.path.join(base_dir, storage_path)
+                
+            # Kontrola, či adresár existuje
+            if not os.path.exists(storage_path):
+                os.makedirs(storage_path, exist_ok=True)
+                self._show_error_popup("No images found for this device")
+                return
+                
+            # Hľadanie obrázkov pre toto zariadenie
+            matching_images = []
+            
+            for filename in os.listdir(storage_path):
+                # Hľadáme súbory spájané s týmto zariadením podľa typu senzora
+                if (filename.startswith(("motion_", "door_", "window_")) and 
+                    filename.endswith(('.jpg', '.jpeg', '.png'))):
+                    # Získanie úplnej cesty k súboru
+                    filepath = os.path.join(storage_path, filename)
+                    # Pridanie s časom vytvorenia súboru pre zoradenie
+                    matching_images.append((filepath, os.path.getmtime(filepath)))
+            
+            # Zoradenie podľa času (najnovšie prvé)
+            matching_images.sort(key=lambda x: x[1], reverse=True)
+            
+            if not matching_images:
+                self._show_error_popup("No images found for this device")
+                return
+                
+            # Zobrazenie obrázkov v carousel popup
+            self._show_images_carousel([img[0] for img in matching_images])
+            
+        except Exception as e:
+            print(f"ERROR: Zlyhalo zobrazenie obrázkov: {e}")
+            self._show_error_popup(f"Error loading images: {str(e)}")
+            
+    def _show_images_carousel(self, image_paths):
+        """Zobrazenie obrázkov v karuseli (slideshow)"""
+        # Vytvorenie obsahu popup
+        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        
+        # Vytvorenie karuselu
+        carousel = Carousel(direction='right', size_hint_y=0.9)
+        
+        for img_path in image_paths:
+            img_container = BoxLayout(orientation='vertical')
+            img = Image(
+                source=img_path,
+                allow_stretch=True,
+                keep_ratio=True,
+                size_hint_y=0.9
+            )
+            img_container.add_widget(img)
+            
+            # Pridanie menovky s názvom súboru a dátumom
+            filename = os.path.basename(img_path)
+            file_time = datetime.fromtimestamp(os.path.getmtime(img_path)).strftime("%Y-%m-%d %H:%M:%S")
+            img_container.add_widget(Label(
+                text=f"{filename} - {file_time}",
+                size_hint_y=0.1
+            ))
+            
+            carousel.add_widget(img_container)
+        
+        content.add_widget(carousel)
+        
+        # Tlačidlo na zatvorenie
+        close_button = Button(
+            text="Close",
+            size_hint_y=0.1
+        )
+        content.add_widget(close_button)
+        
+        # Vytvorenie a zobrazenie popup
+        popup = Popup(
+            title=f"Images from {self.device_name.text}",
+            content=content,
+            size_hint=(0.9, 0.9)
+        )
+        
+        close_button.bind(on_release=popup.dismiss)
+        popup.open()
+    
+    def _show_error_popup(self, message):
+        """Zobrazenie chybového hlásenia"""
+        content = BoxLayout(orientation='vertical', padding=10)
+        content.add_widget(Label(text=message))
+        
+        button = Button(text="Close", size_hint_y=0.3)
+        content.add_widget(button)
+        
+        popup = Popup(
+            title="Error",
+            content=content,
+            size_hint=(0.7, 0.4)
+        )
+        
+        button.bind(on_release=popup.dismiss)
+        popup.open()
+    
+    def confirm_remove_device(self):
+        """Potvrdenie pred odstránením zariadenia"""
+        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        
+        content.add_widget(Label(
+            text=f"Are you sure you want to remove device {self.device_name.text}?",
+            halign='center'
+        ))
+        
+        buttons = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=0.4)
+        
+        cancel_btn = Button(text="Cancel")
+        remove_btn = Button(text="Remove")
+        
+        buttons.add_widget(cancel_btn)
+        buttons.add_widget(remove_btn)
+        content.add_widget(buttons)
+        
+        popup = Popup(
+            title="Confirm Device Removal",
+            content=content,
+            size_hint=(0.7, 0.4),
+            auto_dismiss=True
+        )
+        
+        cancel_btn.bind(on_release=popup.dismiss)
+        remove_btn.bind(on_release=lambda btn: self.remove_device(popup))
+        
+        popup.open()
+    
+    def remove_device(self, popup):
+        """Odstránenie zariadenia zo systému"""
+        popup.dismiss()
+        
+        # Odstránenie zariadenia z konfigurácie
+        success = remove_sensor_device(self.device_id)
+        
+        if success and self.refresh_callback:
+            self.refresh_callback()
+    
+    def request_refresh(self):
+        """Volanie callback funkcie na obnovenie stavu"""
+        if self.refresh_callback:
+            self.refresh_callback()
 
 class DashboardScreen(Screen):
     """Hlavná obrazovka dashboardu zobrazujúca všetky zariadenia senzorov"""
@@ -233,6 +485,7 @@ class DashboardScreen(Screen):
             else:
                 # Vytvorenie novej karty
                 card = SensorCard(device_id, device_data)
+                card.refresh_callback = self.refresh_dashboard
                 card.update_status(statuses.get(device_id, {}))
                 self.sensor_cards[device_id] = card
                 self.sensors_layout.add_widget(card)

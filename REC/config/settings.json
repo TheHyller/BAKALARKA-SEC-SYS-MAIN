@@ -1,10 +1,27 @@
 {
     "pin_code": "1234",
-    "system_active": true,
+    "system_active": false,
     "network": {
         "tcp_port": 8080,
         "udp_port": 8081,
         "discovery_port": 8082
     },
-    "sensors": []
+    "sensors": [],
+    "alerts": {
+        "sound_enabled": true,
+        "notification_type": "Visual",
+        "retention_days": 30
+    },
+    "images": {
+        "storage_path": "captures",
+        "retention_days": 14,
+        "quality": "Medium"
+    },
+    "system": {
+        "auto_start": true,
+        "log_level": "INFO",
+        "config_format": "JSON"
+    },
+    "sensor_devices": {},
+    "sensor_status": {}
 }

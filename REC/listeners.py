@@ -2,6 +2,7 @@ import socket
 import threading
 import time
 import json
+import os
 from datetime import datetime
 try:
     from config.settings import get_setting, add_sensor_device, update_sensor_status
@@ -39,13 +40,15 @@ class TCPListener(threading.Thread):
             while self.running:
                 try:
                     client, address = self.socket.accept()
-                    data = client.recv(1024).decode('utf-8')
-                    print(f"DEBUG: TCP dáta prijaté z {address}: {data}")
                     
-                    for callback in self.callbacks:
-                        callback(data, address)
-                        
-                    client.close()
+                    # Vytvorenie vlákna pre obsluhu klienta
+                    client_thread = threading.Thread(
+                        target=self._handle_client,
+                        args=(client, address)
+                    )
+                    client_thread.daemon = True
+                    client_thread.start()
+                    
                 except Exception as e:
                     print(f"ERROR: Chyba TCP pripojenia: {e}")
                     time.sleep(1)
@@ -53,6 +56,129 @@ class TCPListener(threading.Thread):
             print(f"ERROR: TCP poslucháč sa nepodarilo spustiť: {e}")
         finally:
             self.socket.close()
+            
+    def _handle_client(self, client, address):
+        """Spracovanie pripojenia klienta a prijatia dát"""
+        try:
+            # Príjem hlavičky (prvé 4 bajty obsahujú dĺžku hlavičky JSON)
+            header_length_data = client.recv(4)
+            if not header_length_data:
+                print(f"DEBUG: Klient {address} sa odpojil bez odoslania dát")
+                return
+                
+            header_length = int.from_bytes(header_length_data, byteorder='big')
+            header_data = client.recv(header_length)
+            
+            if not header_data:
+                print(f"DEBUG: Klient {address} sa odpojil bez odoslania hlavičky")
+                return
+                
+            # Parsovanie hlavičky
+            header = json.loads(header_data.decode('utf-8'))
+            
+            print(f"DEBUG: Prijatá TCP hlavička z {address}: {header}")
+            
+            # Spracovanie rôznych typov dát
+            if header.get('type') == 'image':
+                self._handle_image_data(client, header, address)
+            else:
+                print(f"WARNING: Neznámy typ dát v hlavičke: {header.get('type')}")
+                
+            # Volanie všetkých callbackov
+            data_info = {
+                "header": header,
+                "address": address,
+            }
+            for callback in self.callbacks:
+                callback(data_info, address)
+                
+        except Exception as e:
+            print(f"ERROR: Chyba pri spracovaní TCP pripojenia z {address}: {e}")
+        finally:
+            client.close()
+            
+    def _handle_image_data(self, client, header, address):
+        """Spracovanie prijatia obrazových dát"""
+        try:
+            # Čítanie dĺžky obrazových dát
+            image_length_data = client.recv(4)
+            image_length = int.from_bytes(image_length_data, byteorder='big')
+            
+            # Postupne načítavanie obrazových dát
+            received_data = bytearray()
+            bytes_received = 0
+            
+            while bytes_received < image_length:
+                chunk = client.recv(min(4096, image_length - bytes_received))
+                if not chunk:
+                    break
+                received_data.extend(chunk)
+                bytes_received += len(chunk)
+                
+            if bytes_received < image_length:
+                print(f"WARNING: Nepodarilo sa prijať všetky obrazové dáta. Očakávané: {image_length}, Prijaté: {bytes_received}")
+                return
+                
+            print(f"DEBUG: Prijaté obrazové dáta, {bytes_received} bajtov")
+            
+            # Získanie potrebných metadát
+            trigger_type = header.get('trigger', 'unknown')
+            timestamp = header.get('timestamp')
+            filename = header.get('filename', f"{trigger_type}_{int(time.time())}.jpg")
+            
+            # Uloženie obrazových dát
+            self._save_image_data(received_data, trigger_type, timestamp, filename, address[0])
+            
+        except Exception as e:
+            print(f"ERROR: Zlyhalo spracovanie obrazových dát: {e}")
+            
+    def _save_image_data(self, image_data, trigger_type, timestamp, filename, sender_ip):
+        """Uloženie prijatých obrazových dát do súboru"""
+        try:
+            # Získanie cesty z nastavení
+            storage_path = get_setting("images.storage_path", "captures")
+            
+            # Ak nie je absolútna cesta, vytvor cestu relatívnu k projektu
+            if not os.path.isabs(storage_path):
+                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                storage_path = os.path.join(base_dir, storage_path)
+                
+            # Zaisti existenciu adresára
+            os.makedirs(storage_path, exist_ok=True)
+            
+            # Vytvorenie súboru
+            filepath = os.path.join(storage_path, filename)
+            
+            with open(filepath, 'wb') as f:
+                f.write(image_data)
+                
+            print(f"DEBUG: Uložený obrázok: {filepath}")
+            
+            # Volanie notifikácií alebo logovanie
+            # Tu by sme mohli pridať kód na správu upozornení alebo logovanie udalosti
+            
+            # Ak je to obrázok zo senzora, aktualizuj stav senzora
+            if trigger_type in ['motion', 'door', 'window']:
+                # Hľadanie ID zariadenia na základe IP adresy
+                device_id = None
+                device_name = None
+                
+                from config.settings import get_sensor_devices
+                devices = get_sensor_devices()
+                
+                for d_id, d_data in devices.items():
+                    if d_data.get('ip') == sender_ip:
+                        device_id = d_id
+                        device_name = d_data.get('name', 'Unknown Device')
+                        break
+                        
+                if device_id:
+                    status = "DETECTED" if trigger_type == "motion" else "OPEN"
+                    update_sensor_status(device_id, trigger_type, status)
+                    print(f"DEBUG: Aktualizovaný stav senzora {trigger_type} na {status} pre zariadenie {device_name}")
+            
+        except Exception as e:
+            print(f"ERROR: Zlyhalo uloženie obrázka: {e}")
             
     def stop(self):
         """Zastavenie vlákna TCP poslucháča"""

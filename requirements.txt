@@ -1,19 +1,19 @@
 # GUI and Interface
-Kivy==2.1.0
+Kivy==2.3.0
 kivymd==1.1.1
 
 # Network and Communication
-python-socketio==5.1.0
-requests==2.32.2
+python-socketio==5.8.0
+requests==2.32.3
 
 # Image Processing
 Pillow==10.3.0
 opencv-python==4.8.1.78
-numpy==1.24.3
+numpy==2.2.0
 
 # Utilities
 python-dotenv==1.0.0
-pyyaml==6.0
+pyyaml==6.0.1
 
 # Raspberry Pi (uncomment if using sender component)
 # RPi.GPIO>=0.7.0

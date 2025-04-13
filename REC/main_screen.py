@@ -6,8 +6,11 @@ from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.textinput import TextInput
+from kivy.uix.image import Image
 from kivy.clock import Clock
-from config.settings import get_setting, validate_pin, update_pin, toggle_system_state
+from datetime import datetime
+import os
+from config.settings import get_setting, validate_pin, update_pin, toggle_system_state, get_alerts, get_sensor_devices, get_sensor_status
 from listeners import TCPListener, UDPListener, DiscoveryListener
 
 class NumericKeypad(GridLayout):
@@ -62,15 +65,67 @@ class MainScreen(Screen):
         # Vytvorenie hlavného rozloženia
         layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
         
-        # Stavový štítok
-        self.status_label = Label(
-            text="System Status: Inactive", 
-            font_size=24,
-            size_hint_y=0.2
+        # Logo a názov aplikácie
+        header_layout = BoxLayout(orientation='horizontal', size_hint_y=0.15)
+        
+        # Logo - use our created logo
+        logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
+                               "assets", "security_logo.png")
+        logo = Image(
+            source=logo_path,
+            size_hint_x=0.3
         )
         
+        # Názov a stavový štítok
+        title_layout = BoxLayout(orientation='vertical', size_hint_x=0.7)
+        title_layout.add_widget(Label(
+            text="Home Security System", 
+            font_size=28,
+            bold=True,
+            size_hint_y=0.6
+        ))
+        
+        self.status_label = Label(
+            text="System Status: Inactive", 
+            font_size=18,
+            size_hint_y=0.4
+        )
+        title_layout.add_widget(self.status_label)
+        
+        header_layout.add_widget(logo)
+        header_layout.add_widget(title_layout)
+        layout.add_widget(header_layout)
+        
+        # Súhrn zariadení
+        devices_summary = BoxLayout(orientation='vertical', size_hint_y=0.2)
+        devices_summary.add_widget(Label(
+            text="Connected Devices",
+            font_size=18,
+            bold=True,
+            size_hint_y=0.3
+        ))
+        
+        self.devices_grid = GridLayout(cols=3, spacing=5, size_hint_y=0.7)
+        self.update_devices_summary()
+        devices_summary.add_widget(self.devices_grid)
+        layout.add_widget(devices_summary)
+        
+        # Posledné upozornenia
+        alerts_summary = BoxLayout(orientation='vertical', size_hint_y=0.3)
+        alerts_summary.add_widget(Label(
+            text="Recent Alerts",
+            font_size=18,
+            bold=True,
+            size_hint_y=0.2
+        ))
+        
+        self.alerts_list = GridLayout(cols=1, spacing=5, size_hint_y=0.8)
+        self.update_alerts_summary()
+        alerts_summary.add_widget(self.alerts_list)
+        layout.add_widget(alerts_summary)
+        
         # Rozloženie tlačidiel
-        button_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=0.2)
+        buttons_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=0.15)
         
         self.toggle_button = Button(
             text="Activate System",
@@ -84,8 +139,9 @@ class MainScreen(Screen):
         )
         self.change_pin_button.bind(on_release=self.show_change_pin)
         
-        button_layout.add_widget(self.toggle_button)
-        button_layout.add_widget(self.change_pin_button)
+        buttons_layout.add_widget(self.toggle_button)
+        buttons_layout.add_widget(self.change_pin_button)
+        layout.add_widget(buttons_layout)
         
         # Pridanie navigačných tlačidiel
         nav_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=0.2)
@@ -111,76 +167,127 @@ class MainScreen(Screen):
         nav_layout.add_widget(dashboard_button)
         nav_layout.add_widget(alerts_button)
         nav_layout.add_widget(settings_button)
-        
-        # Oblasť stavu senzorov (zjednodušená - teraz máme samostatný dashboard)
-        sensor_layout = BoxLayout(orientation='vertical', size_hint_y=0.4)
-        sensor_layout.add_widget(Label(text="Recent Activity:", font_size=18, size_hint_y=0.2))
-        self.sensor_list = GridLayout(cols=1, spacing=5)
-        sensor_layout.add_widget(self.sensor_list)
-        
-        # Pridanie widgetov do hlavného rozloženia
-        layout.add_widget(self.status_label)
-        layout.add_widget(button_layout)
-        layout.add_widget(nav_layout)  # Pridanie navigačných tlačidiel
-        layout.add_widget(sensor_layout)
+        layout.add_widget(nav_layout)
         
         self.add_widget(layout)
         
-        # Spustenie sieťových poslucháčov
-        self.start_listeners()
+        # Naplánuj pravidelné aktualizácie
+        Clock.schedule_interval(self.update_ui, 5)  # Každých 5 sekúnd
         
-        # Aktualizácia UI s aktuálnym stavom
+    def on_enter(self):
+        """Volaná pri vstupe na obrazovku"""
         self.update_ui()
         
-    def start_listeners(self):
-        """Spustenie sieťových poslucháčov pre senzory"""
-        self.tcp_listener = TCPListener()
-        self.tcp_listener.add_callback(self.handle_sensor_data)
-        self.tcp_listener.start()
+    def update_devices_summary(self):
+        """Aktualizácia súhrnu pripojených zariadení"""
+        self.devices_grid.clear_widgets()
         
-        self.udp_listener = UDPListener()
-        self.udp_listener.add_callback(self.handle_sensor_data)
-        self.udp_listener.start()
+        devices = get_sensor_devices()
         
-        self.discovery_listener = DiscoveryListener()
-        self.discovery_listener.add_callback(self.handle_discovery)
-        self.discovery_listener.start()
-        
-    def handle_sensor_data(self, data, address):
-        """Spracovanie dát prijatých zo senzorov"""
-        print(f"DEBUG: Prijaté dáta zo senzora: {data} z {address}")
-        # Parsovanie dát zo senzora a aktualizácia UI
-        # Napríklad: "SENSOR:front_door:OPEN"
-        Clock.schedule_once(lambda dt: self.update_sensor_ui(data, address), 0)
-        
-    def handle_discovery(self, data, address):
-        """Spracovanie správ objavovania"""
-        print(f"DEBUG: Prijatá správa objavovania: {data} z {address}")
-        
-    def update_sensor_ui(self, data, address):
-        """Aktualizácia UI senzora s novými dátami"""
-        # Príklad implementácie - bola by rozšírená v reálnej aplikácii
-        try:
-            sensor_label = Label(
-                text=f"Sensor data: {data} from {address[0]}",
+        if not devices:
+            self.devices_grid.add_widget(Label(
+                text="No devices connected",
                 font_size=16,
+                size_hint_x=1,
+                halign='center'
+            ))
+            return
+        
+        # Zobrazenie súhrnu zariadení
+        total_devices = len(devices)
+        active_devices = 0
+        
+        # Zistenie počtu aktívnych zariadení
+        now = datetime.now()
+        for device_id, device_data in devices.items():
+            if 'last_seen' in device_data:
+                try:
+                    last_seen = datetime.fromisoformat(device_data['last_seen'])
+                    if (now - last_seen).total_seconds() < 3600:  # Aktívne v poslednej hodine
+                        active_devices += 1
+                except (ValueError, TypeError):
+                    pass
+                    
+        # Prvý stĺpec - Celkový počet
+        self.devices_grid.add_widget(Label(
+            text=f"Total: {total_devices}",
+            font_size=16
+        ))
+        
+        # Druhý stĺpec - Aktívne
+        self.devices_grid.add_widget(Label(
+            text=f"Active: {active_devices}",
+            font_size=16,
+            color=(0, 1, 0, 1) if active_devices > 0 else (1, 0, 0, 1)
+        ))
+        
+        # Tretí stĺpec - Indikátor stavu
+        status_text = "All Online" if active_devices == total_devices else "Some Offline"
+        status_color = (0, 1, 0, 1) if active_devices == total_devices else (1, 0.7, 0, 1)
+        
+        self.devices_grid.add_widget(Label(
+            text=status_text,
+            font_size=16,
+            color=status_color
+        ))
+        
+    def update_alerts_summary(self):
+        """Aktualizácia súhrnu posledných upozornení"""
+        self.alerts_list.clear_widgets()
+        
+        # Načítanie posledných 3 upozornení
+        alerts = get_alerts(3)
+        
+        if not alerts:
+            self.alerts_list.add_widget(Label(
+                text="No recent alerts",
+                font_size=16
+            ))
+            return
+            
+        # Zobrazenie upozornení
+        for alert in alerts:
+            device_name = alert.get('device_name', 'Unknown Device')
+            sensor_type = alert.get('sensor_type', 'unknown').capitalize()
+            status = alert.get('status', 'UNKNOWN')
+            timestamp = alert.get('timestamp', 0)
+            
+            # Formátovanie časovej pečiatky
+            if isinstance(timestamp, (int, float)):
+                time_str = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                time_str = str(timestamp)
+                
+            # Vytvorenie štítku upozornenia
+            alert_text = f"{time_str} - {device_name}: {sensor_type} {status}"
+            alert_label = Label(
+                text=alert_text,
+                font_size=14,
                 halign='left'
             )
-            self.sensor_list.add_widget(sensor_label)
-        except Exception as e:
-            print(f"ERROR: Zlyhala aktualizácia UI senzora: {e}")
+            alert_label.bind(size=lambda s, w: setattr(s, 'text_size', w))
+            
+            self.alerts_list.add_widget(alert_label)
         
-    def update_ui(self):
+    def update_ui(self, *args):
         """Aktualizácia UI na základe aktuálneho stavu systému"""
         system_active = get_setting("system_active", False)
         
         if system_active:
             self.status_label.text = "System Status: ACTIVE"
+            self.status_label.color = (0, 1, 0, 1)  # Zelená pre aktívny stav
             self.toggle_button.text = "Deactivate System"
+            self.toggle_button.background_color = (1, 0.5, 0.5, 1)  # Červená pre deaktiváciu
         else:
             self.status_label.text = "System Status: INACTIVE"
+            self.status_label.color = (1, 0, 0, 1)  # Červená pre neaktívny stav
             self.toggle_button.text = "Activate System"
+            self.toggle_button.background_color = (0.5, 1, 0.5, 1)  # Zelená pre aktiváciu
             
+        # Aktualizácia súhrnu zariadení a upozornení
+        self.update_devices_summary()
+        self.update_alerts_summary()
+        
         print(f"DEBUG: UI aktualizované, systém aktívny: {system_active}")
         
     def toggle_system(self, instance):
@@ -287,7 +394,7 @@ class MainScreen(Screen):
             )
             error_popup.open()
     
-    # Pridanie nových navigačných metód
+    # Navigačné metódy
     def open_dashboard(self, instance):
         """Otvorenie obrazovky dashboard senzorov"""
         self.manager.current = 'dashboard'
