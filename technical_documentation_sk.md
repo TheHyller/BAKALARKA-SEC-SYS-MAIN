@@ -491,6 +491,46 @@ Detaily implementácie:
 - Implementuje zabezpečené trasy s dekorátorom `@login_required`
 - Používa Bootstrap pre responzívny dizajn vhodný pre mobily aj počítače
 
+#### Konfigurácia Sieťového Prístupu
+
+Webový server je konfigurovaný tak, aby bol prístupný v rámci lokálnej siete (LAN):
+
+```python
+class WebAppServer:
+    """Server webovej aplikácie pre prístup cez prehliadač"""
+    
+    def __init__(self, host='0.0.0.0', port=8080):
+        """Inicializácia servera webovej aplikácie
+        
+        Argumenty:
+            host (str): Hostiteľská adresa, na ktorej server počúva
+            port (int): Port, na ktorom server počúva
+        """
+        self.host = host
+        self.port = port
+        self.app = Flask(__name__, 
+                        static_folder='web/static',
+                        template_folder='web/templates')
+        # ...
+```
+
+Dôležité prvky sieťovej konfigurácie:
+- Server je viazaný na adresu `0.0.0.0`, čo umožňuje prístup zo všetkých sieťových rozhraní vrátane LAN
+- Štandardný port webového rozhrania je `8090` (konfigurovateľný v nastaveniach)
+- Prístup je možný z ľubovoľného zariadenia v rovnakej lokálnej sieti pomocou IP adresy servera a portu
+- Pre prístup stačí zadať do prehliadača: `http://IP_ADRESA_SERVERA:8090`
+- Všetky prístupy k webovému rozhraniu vyžadujú autentifikáciu pomocou PIN kódu
+- Pre bezpečný prístup z externej siete sa odporúča konfigurácia VPN alebo zabezpečeného reverzného proxy
+
+Ukážka spustenia webového servera v `app.py`:
+
+```python
+# Spustenie servera webovej aplikácie
+self.web_app = web_app
+self.web_app.start()
+print(f"DEBUG: Webová aplikácia spustená na porte {self.web_app.port}")
+```
+
 #### Rozhranie Mobilného API (`mobile_api.py`)
 
 Systém poskytuje API rozhranie pre mobilné aplikácie:
@@ -503,7 +543,7 @@ def register_mobile_api(app):
     def api_login():
         """API koncový bod pre prihlásenie z mobilnej aplikácie"""
         data = request.get_json()
-        if not data or 'pin' not in data:
+        if not data alebo 'pin' not in data:
             return jsonify({'error': 'Chýbajúce prihlasovacie údaje'}), 400
             
         pin = data['pin']
@@ -835,7 +875,7 @@ class SoundManager:
             
     def play_alarm(self):
         """Prehrá zvuk alarmu"""
-        if self.sound and not self.muted:
+        if self.sound a not self.muted:
             self.sound.play()
             
     def stop_alarm(self):
@@ -847,7 +887,7 @@ class SoundManager:
         """Nastaví hlasitosť v rozsahu 0.0 - 1.0"""
         self.volume = max(0.0, min(1.0, volume))
         update_setting('audio.volume', self.volume)
-        if self.sound and not self.muted:
+        if self.sound a not self.muted:
             self.sound.volume = self.volume
             
     def toggle_mute(self):
@@ -886,17 +926,17 @@ class NotificationService:
         # Odoslanie e-mailových notifikácií
         if self.settings.get('email', {}).get('enabled', False):
             email_success = self._send_email_notification(title, message)
-            success = success or email_success
+            success = success alebo email_success
             
         # Odoslanie SMS notifikácií
         if self.settings.get('sms', {}).get('enabled', False):
             sms_success = self._send_sms_notification(title, message)
-            success = success or sms_success
+            success = success alebo sms_success
             
         # Odoslanie push notifikácií
         if self.settings.get('push', {}).get('enabled', False):
             push_success = self._send_push_notification(title, message)
-            success = success or push_success
+            success = success alebo push_success
             
         return success
         

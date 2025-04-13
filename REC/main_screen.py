@@ -1,5 +1,5 @@
 # Inicializácia balíka
-from kivy.uix.screenmanager import Screen
+from base_screen import BaseScreen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
@@ -11,7 +11,7 @@ from kivy.clock import Clock
 from datetime import datetime
 import os
 from config.settings import get_setting, validate_pin, update_pin, toggle_system_state, get_alerts, get_sensor_devices, get_sensor_status
-from listeners import TCPListener, UDPListener, DiscoveryListener
+from network import network_manager
 
 class NumericKeypad(GridLayout):
     def __init__(self, callback, **kwargs):
@@ -58,37 +58,26 @@ class NumericKeypad(GridLayout):
     def on_enter(self, instance):
         self.callback(self.pin_input)
         
-class MainScreen(Screen):
+class MainScreen(BaseScreen):
     def __init__(self, **kwargs):
         super(MainScreen, self).__init__(**kwargs)
         
-        # Vytvorenie hlavného rozloženia
-        layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        # Nastavenie titulku
+        self.set_title("Home Security System")
         
-        # Header with title and status
-        header_layout = BoxLayout(orientation='horizontal', size_hint_y=0.15)
-        
-        # Názov a stavový štítok - now taking full width
-        title_layout = BoxLayout(orientation='vertical', size_hint_x=1.0)
-        title_layout.add_widget(Label(
-            text="Home Security System", 
-            font_size=28,
-            bold=True,
-            size_hint_y=0.6
-        ))
-        
+        # Upravenie hlavičky - pridanie stavového štítku
         self.status_label = Label(
             text="System Status: Inactive", 
             font_size=18,
             size_hint_y=0.4
         )
-        title_layout.add_widget(self.status_label)
+        self.header.add_widget(self.status_label)
         
-        header_layout.add_widget(title_layout)
-        layout.add_widget(header_layout)
+        # Vytvorenie oblasti obsahu
+        content_area = self.create_content_area()
         
         # Súhrn zariadení
-        devices_summary = BoxLayout(orientation='vertical', size_hint_y=0.2)
+        devices_summary = BoxLayout(orientation='vertical', size_hint_y=0.3)
         devices_summary.add_widget(Label(
             text="Connected Devices",
             font_size=18,
@@ -99,10 +88,10 @@ class MainScreen(Screen):
         self.devices_grid = GridLayout(cols=3, spacing=5, size_hint_y=0.7)
         self.update_devices_summary()
         devices_summary.add_widget(self.devices_grid)
-        layout.add_widget(devices_summary)
+        content_area.add_widget(devices_summary)
         
         # Posledné upozornenia
-        alerts_summary = BoxLayout(orientation='vertical', size_hint_y=0.3)
+        alerts_summary = BoxLayout(orientation='vertical', size_hint_y=0.5)
         alerts_summary.add_widget(Label(
             text="Recent Alerts",
             font_size=18,
@@ -113,10 +102,17 @@ class MainScreen(Screen):
         self.alerts_list = GridLayout(cols=1, spacing=5, size_hint_y=0.8)
         self.update_alerts_summary()
         alerts_summary.add_widget(self.alerts_list)
-        layout.add_widget(alerts_summary)
+        content_area.add_widget(alerts_summary)
         
-        # Rozloženie tlačidiel
-        buttons_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=0.15)
+        # Vytvorenie päty (footer)
+        footer = self.create_footer()
+        
+        # Rozloženie do dvoch riadkov, použitím GridLayout
+        footer_grid = GridLayout(cols=1, rows=2, spacing=10)
+        footer.add_widget(footer_grid)
+        
+        # Rozloženie tlačidiel - prvý riadok
+        buttons_layout = GridLayout(cols=2, spacing=10)
         
         self.toggle_button = Button(
             text="Activate System",
@@ -132,10 +128,10 @@ class MainScreen(Screen):
         
         buttons_layout.add_widget(self.toggle_button)
         buttons_layout.add_widget(self.change_pin_button)
-        layout.add_widget(buttons_layout)
+        footer_grid.add_widget(buttons_layout)
         
-        # Pridanie navigačných tlačidiel
-        nav_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=0.2)
+        # Pridanie navigačných tlačidiel - druhý riadok
+        nav_layout = GridLayout(cols=3, spacing=10)
         
         dashboard_button = Button(
             text="Sensor Dashboard",
@@ -158,12 +154,17 @@ class MainScreen(Screen):
         nav_layout.add_widget(dashboard_button)
         nav_layout.add_widget(alerts_button)
         nav_layout.add_widget(settings_button)
-        layout.add_widget(nav_layout)
         
-        self.add_widget(layout)
+        footer_grid.add_widget(nav_layout)
+        
+        # Track grace period popup
+        self.grace_period_popup = None
         
         # Naplánuj pravidelné aktualizácie
         Clock.schedule_interval(self.update_ui, 5)  # Každých 5 sekúnd
+        
+        # More frequent checks for grace period status
+        Clock.schedule_interval(self.check_grace_period, 1)  # Check every second
         
     def on_enter(self):
         """Volaná pri vstupe na obrazovku"""
@@ -397,3 +398,35 @@ class MainScreen(Screen):
     def open_settings(self, instance):
         """Otvorenie obrazovky nastavení"""
         self.manager.current = 'settings'
+    
+    def check_grace_period(self, dt):
+        """Check if there's an active grace period and show alert if needed"""
+        # Import notification service here to avoid circular imports
+        from notification_service import notification_service
+        
+        # Get current grace period status
+        grace_status = notification_service.get_grace_period_status()
+        
+        # If there's an active grace period and no popup is currently shown
+        if grace_status and grace_status.get('active') and not self.grace_period_popup:
+            # Get alert data from the grace period
+            alert_data = grace_status.get('alert_data')
+            if alert_data:
+                # Import the GracePeriodAlert class from alerts_screen
+                from alerts_screen import GracePeriodAlert
+                
+                # Create and show the grace period alert popup
+                self.grace_period_popup = GracePeriodAlert(alert_data, grace_seconds=30)
+                self.grace_period_popup.bind(on_dismiss=self.on_grace_period_popup_closed)
+                self.grace_period_popup.open()
+                print("DEBUG: Displaying grace period alert popup")
+                
+        # If no active grace period but popup is shown, make sure it gets cleaned up
+        elif not grace_status and self.grace_period_popup:
+            if self.grace_period_popup.time_remaining > 0:
+                self.grace_period_popup.dismiss()
+    
+    def on_grace_period_popup_closed(self, instance):
+        """Called when the grace period popup is closed"""
+        self.grace_period_popup = None
+        print("DEBUG: Grace period alert popup closed")

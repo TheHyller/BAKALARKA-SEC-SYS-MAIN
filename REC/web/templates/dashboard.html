@@ -3,6 +3,27 @@
 {% block title %}Dashboard - Security System{% endblock %}
 
 {% block content %}
+<!-- Grace Period Alert Modal -->
+<div class="modal fade" id="gracePeriodModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="gracePeriodModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="gracePeriodModalLabel">⚠️ SECURITY ALERT!</h5>
+      </div>
+      <div class="modal-body text-center">
+        <h4 id="alert-details" class="mb-3">Motion detected</h4>
+        <div class="alert alert-danger">
+          <h3 id="countdown-timer">System will alarm in <span id="seconds-remaining">30</span> seconds</h3>
+        </div>
+        <p>Disable the system to cancel the alarm.</p>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button type="button" class="btn btn-success btn-lg" id="disable-system-btn">DISABLE SYSTEM</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="row">
     <!-- System Status Card -->
     <div class="col-md-12 mb-4">
@@ -104,10 +125,7 @@
                                 {% if 'last_seen' in device %}
                                     {% set last_seen_timestamp = device.last_seen|string %}
                                     {% if 'T' in last_seen_timestamp %}
-                                        {% set active = false %}
-                                        {% if now() and datetime %}
-                                            {% set active = ((now().timestamp() - datetime.fromisoformat(last_seen_timestamp).timestamp()) < 3600) %}
-                                        {% endif %}
+                                        {% set active = device.active|default(false) %}
                                         <span class="badge {% if active %}bg-success{% else %}bg-danger{% endif %}">
                                             {% if active %}Active{% else %}Offline{% endif %}
                                         </span>
@@ -136,6 +154,117 @@
 
 {% block extra_js %}
 <script>
+    // Grace period alert handling
+    let gracePeriodTimer = null;
+    let secondsRemaining = 30;
+    let gracePeriodModal = null;
+    
+    // Initialize the Bootstrap modal
+    document.addEventListener('DOMContentLoaded', function() {
+        gracePeriodModal = new bootstrap.Modal(document.getElementById('gracePeriodModal'));
+        
+        // Set up the disable system button in the grace period modal
+        document.getElementById('disable-system-btn').addEventListener('click', function() {
+            // Disable the system
+            fetch('/api/toggle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ active: false })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && !data.system_active) {
+                    // Update UI
+                    const statusText = document.getElementById('system-status-text');
+                    const statusBadge = document.querySelector('#status-card .badge');
+                    const toggleBtn = document.getElementById('toggle-system-btn');
+                    
+                    statusText.innerText = 'INACTIVE';
+                    statusText.className = 'system-inactive';
+                    statusBadge.innerText = 'INACTIVE';
+                    statusBadge.className = 'badge bg-danger';
+                    toggleBtn.innerText = 'Activate System';
+                    toggleBtn.className = 'btn btn-success';
+                    
+                    // Show success message in the modal
+                    document.getElementById('countdown-timer').innerHTML = 
+                        '<span class="text-success">System successfully disabled</span>';
+                    
+                    // Close the modal after 2 seconds
+                    setTimeout(function() {
+                        gracePeriodModal.hide();
+                    }, 2000);
+                } else {
+                    alert('Failed to disable system: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error disabling system:', error);
+                alert('An error occurred while disabling the system.');
+            });
+        });
+        
+        // Start checking for grace period alerts
+        checkGracePeriod();
+        refreshDashboardData();
+    });
+    
+    // Function to check for grace period alerts
+    function checkGracePeriod() {
+        // Check every second
+        setInterval(function() {
+            fetch('/api/grace_period_status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.active && !gracePeriodModal._isShown) {
+                        // Get alert details
+                        const alertDetails = data.alert_data;
+                        
+                        // Update modal content
+                        let alertText = "Security alert detected";
+                        if (alertDetails && alertDetails.sensor_type && alertDetails.device_name) {
+                            // Format: "Motion detected on Device Name"
+                            alertText = alertDetails.sensor_type.charAt(0).toUpperCase() + 
+                                       alertDetails.sensor_type.slice(1) + 
+                                       " detected on " + alertDetails.device_name;
+                        }
+                        document.getElementById('alert-details').innerText = alertText;
+                        
+                        // Reset countdown
+                        secondsRemaining = data.seconds_remaining || 30;
+                        document.getElementById('seconds-remaining').innerText = secondsRemaining;
+                        
+                        // Show the modal
+                        gracePeriodModal.show();
+                        
+                        // Start the countdown
+                        if (gracePeriodTimer) {
+                            clearInterval(gracePeriodTimer);
+                        }
+                        
+                        gracePeriodTimer = setInterval(function() {
+                            secondsRemaining--;
+                            document.getElementById('seconds-remaining').innerText = secondsRemaining;
+                            
+                            if (secondsRemaining <= 0) {
+                                clearInterval(gracePeriodTimer);
+                                gracePeriodModal.hide();
+                            }
+                        }, 1000);
+                    } else if (!data.active && gracePeriodModal._isShown) {
+                        // If grace period is no longer active but modal is shown, hide it
+                        clearInterval(gracePeriodTimer);
+                        gracePeriodModal.hide();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking grace period status:', error);
+                });
+        }, 1000);
+    }
+
     // Toggle system status
     document.getElementById('toggle-system-btn').addEventListener('click', function() {
         // Disable button during API call

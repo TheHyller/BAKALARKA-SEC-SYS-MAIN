@@ -20,7 +20,8 @@ class SettingsManager:
         "alerts": {
             "sound_enabled": True,
             "notification_type": "Visual",
-            "retention_days": 30
+            "retention_days": 30,
+            "items": []
         },
         "images": {
             "storage_path": "captures",
@@ -52,7 +53,8 @@ class SettingsManager:
     def __init__(self):
         """Inicializácia správcu nastavení"""
         # Cesta k súboru nastavení
-        self.config_dir = os.path.dirname(__file__)
+        self.base_dir = os.path.dirname(__file__)
+        self.config_dir = os.path.join(self.base_dir, "config")
         self.settings_file_json = os.path.join(self.config_dir, "settings.json")
         self.settings_file_yaml = os.path.join(self.config_dir, "settings.yaml")
         
@@ -247,7 +249,21 @@ def update_pin(new_pin):
 
 def toggle_system_state(new_state=None):
     """Kompatibilná funkcia - prepne stav systému"""
-    return settings_manager.toggle_system_state(new_state)
+    previous_state = settings_manager.get("system_active", False)
+    result = settings_manager.toggle_system_state(new_state)
+    
+    # Ak sa stav systému zmenil z aktívneho na neaktívny, zruš ochranné časovače
+    if previous_state == True and (new_state is False or new_state is None):
+        try:
+            # Import notifikačnej služby až tu, aby sme predišli cyklickému importu
+            from notification_service import notification_service
+            # Zrušenie bežiacich ochranných časovačov
+            notification_service.cancel_grace_period()
+            print("DEBUG: Zrušené ochranné časovače pri deaktivácii systému")
+        except Exception as e:
+            print(f"ERROR: Zlyhalo zrušenie ochranných časovačov: {e}")
+    
+    return result
 
 def get_sensor_devices():
     """Kompatibilná funkcia - získa zariadenia senzorov"""
@@ -271,32 +287,28 @@ def update_sensor_status(device_id, status_data):
 
 # Funkcia pre správu upozornení
 
-def get_alerts(count=None, unread_only=False):
-    """Get stored alerts from the system
+def get_alerts(include_read=False, max_count=None):
+    """Získa uložené upozornenia zo systému
     
     Args:
-        count (int): Maximum number of alerts to return
-        unread_only (bool): Whether to include only unread alerts
+        include_read (bool): Či zahrnúť prečítané upozornenia
+        max_count (int): Maximálny počet upozornení pre vrátenie
     
     Returns:
-        list: List of alerts
+        list: Zoznam upozornení
     """
     alerts = settings_manager.get("alerts.items", [])
     
-    # Ensure alerts is a list
-    if not isinstance(alerts, list):
-        alerts = []
-    
-    # Filter by read status if requested
-    if unread_only:
+    # Ak sú vyžiadané len neprečítané upozornenia
+    if not include_read:
         alerts = [alert for alert in alerts if not alert.get("read", False)]
     
-    # Sort alerts by timestamp (newest first)
+    # Zoradenie upozornení zostupne podľa času (najnovšie prvé)
     alerts = sorted(alerts, key=lambda x: x.get("timestamp", 0), reverse=True)
     
-    # Limit results if count is specified
-    if count is not None and isinstance(count, int) and count > 0:
-        alerts = alerts[:count]
+    # Ak je zadaný maximálny počet, obmedz výsledky
+    if max_count is not None and isinstance(max_count, int):
+        alerts = alerts[:max_count]
     
     return alerts
 
@@ -335,26 +347,23 @@ def add_alert(alert_data):
     # Uloženie aktualizovaných upozornení
     return settings_manager.update("alerts.items", alerts)
 
-def mark_alert_as_read(alert_index):
-    """Mark an alert as read
+def mark_alert_as_read(alert_id):
+    """Označí upozornenie ako prečítané
     
     Args:
-        alert_index (int): Index of the alert in the list to mark as read
+        alert_id (int): ID upozornenia na označenie
     
     Returns:
-        bool: True if alert was successfully marked as read
+        bool: True ak bolo upozornenie úspešne označené
     """
     alerts = settings_manager.get("alerts.items", [])
     
-    # Make sure alerts is a list and index is valid
-    if not isinstance(alerts, list) or not alerts:
-        return False
-    
-    # Check if index is valid
-    if 0 <= alert_index < len(alerts):
-        alerts[alert_index]["read"] = True
-        alerts[alert_index]["read_timestamp"] = time.time()
-        return settings_manager.update("alerts.items", alerts)
+    # Nájdi a označ upozornenie ako prečítané
+    for alert in alerts:
+        if alert.get("id") == alert_id:
+            alert["read"] = True
+            alert["read_timestamp"] = time.time()
+            return settings_manager.update("alerts.items", alerts)
     
     return False
 

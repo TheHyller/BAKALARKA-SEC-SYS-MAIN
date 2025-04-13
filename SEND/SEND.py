@@ -36,7 +36,7 @@ logger = logging.getLogger("SecuritySender")
 
 # Konfigurácia
 CONFIG = {
-    "receiver_ip": "192.168.1.100",  # IP adresa prijímača (REC komponenta)
+    "receiver_ip": "127.0.0.1",    # Will be updated by discover_receiver()
     "tcp_port": 8080,                # Port pre prenos obrázkov
     "udp_port": 8081,                # Port pre aktualizácie stavu senzorov
     "discovery_port": 8082,          # Port pre službu objavovania
@@ -57,6 +57,11 @@ class SecuritySender:
         self.running = False
         self.camera = None
         self.discovery_thread = None
+        
+        # Tracking variables for sensor states to prevent repeated triggers
+        self.motion_active = False
+        self.motion_last_triggered = 0
+        self.motion_cooldown = 5  # Seconds before motion sensor can trigger again
         
         # Načítanie alebo generovanie unikátneho ID zariadenia
         self._load_or_generate_device_id()
@@ -145,8 +150,16 @@ class SecuritySender:
             logger.error(f"Zlyhala inicializácia kamery: {e}")
     
     def _on_motion_detected(self, channel):
-        """Callback pre detekciu pohybu"""
-        logger.info("Pohyb detekovaný!")
+        """Callback for motion detection with debounce functionality"""
+        current_time = time.time()
+        
+        # Check if we're still in the cooldown period from a previous trigger
+        if current_time - self.motion_last_triggered < self.motion_cooldown:
+            logger.debug(f"Motion detection ignored - within cooldown period ({self.motion_cooldown}s)")
+            return
+            
+        logger.info("Motion detected!")
+        self.motion_last_triggered = current_time
         self._send_sensor_update("motion", "DETECTED")
         self._capture_image("motion")
     

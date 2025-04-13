@@ -1,4 +1,4 @@
-from kivy.uix.screenmanager import Screen
+from base_screen import BaseScreen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.scrollview import ScrollView
@@ -154,8 +154,15 @@ class SensorCard(BoxLayout):
                 font_size=14
             ))
             
+            # Check if data is a dictionary or a string value
+            status = "Unknown"
+            if isinstance(data, dict):
+                status = data.get('status', 'Unknown')
+            else:
+                # If data is a string, use it directly as the status
+                status = str(data)
+            
             # Štítok stavu s farbou podľa stavu
-            status = data.get('status', 'Unknown')
             status_label = Label(text=status, font_size=14)
             
             if status in ['OPEN', 'DETECTED', 'TRIGGERED', 'ALARM']:
@@ -166,7 +173,10 @@ class SensorCard(BoxLayout):
             self.status_area.add_widget(status_label)
             
             # Časová pečiatka
-            timestamp = data.get('timestamp', 0)
+            timestamp = 0
+            if isinstance(data, dict):
+                timestamp = data.get('timestamp', 0)
+            
             if isinstance(timestamp, (int, float)):
                 time_str = datetime.fromtimestamp(timestamp).strftime("%H:%M:%S")
             else:
@@ -369,41 +379,36 @@ class SensorCard(BoxLayout):
         if self.refresh_callback:
             self.refresh_callback()
 
-class DashboardScreen(Screen):
+class DashboardScreen(BaseScreen):
     """Hlavná obrazovka dashboardu zobrazujúca všetky zariadenia senzorov"""
     
     def __init__(self, **kwargs):
         super(DashboardScreen, self).__init__(**kwargs)
         
-        # Vytvorenie hlavného rozloženia
-        layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        # Nastavenie titulku
+        self.set_title("Security System Dashboard")
         
-        # Hlavička
-        header = BoxLayout(orientation='horizontal', size_hint_y=0.1)
-        header.add_widget(Label(
-            text="Security System Dashboard",
-            font_size=24,
-            bold=True,
-            size_hint_x=0.7
-        ))
-        
-        refresh_button = Button(
-            text="Refresh",
-            size_hint_x=0.15
-        )
-        refresh_button.bind(on_release=self.refresh_dashboard)
-        
+        # Pridanie tlačidla späť do hlavičky
         back_button = Button(
             text="Back",
             size_hint_x=0.15
         )
         back_button.bind(on_release=self.go_back)
+        self.header.add_widget(back_button)
         
-        header.add_widget(refresh_button)
-        header.add_widget(back_button)
+        # Vytvorenie oblasti obsahu
+        content_area = self.create_content_area()
+        
+        # Vytvorenie tlačidla na obnovenie v hornej časti obsahu
+        refresh_button = Button(
+            text="Refresh Dashboard",
+            size_hint_y=0.05
+        )
+        refresh_button.bind(on_release=self.refresh_dashboard)
+        content_area.add_widget(refresh_button)
         
         # Oblasť senzorov (s posúvaním)
-        scroll_view = ScrollView(size_hint_y=0.9)
+        scroll_view = ScrollView(size_hint_y=0.95)
         self.sensors_layout = GridLayout(
             cols=1, 
             spacing=10, 
@@ -413,13 +418,8 @@ class DashboardScreen(Screen):
         self.sensors_layout.bind(minimum_height=self.sensors_layout.setter('height'))
         
         scroll_view.add_widget(self.sensors_layout)
-        
-        # Pridanie widgetov do hlavného rozloženia
-        layout.add_widget(header)
-        layout.add_widget(scroll_view)
-        
-        self.add_widget(layout)
-        
+        content_area.add_widget(scroll_view)
+                
         # Uloženie kariet senzorov podľa ID zariadenia
         self.sensor_cards = {}
         

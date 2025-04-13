@@ -1,4 +1,3 @@
-from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
@@ -6,27 +5,31 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.spinner import Spinner
 from kivy.uix.switch import Switch
 from kivy.uix.popup import Popup
+from kivy.uix.scrollview import ScrollView
 # Zmena relatívneho importu na absolútny import
 from config.settings import get_setting, update_setting, save_settings
+from base_screen import BaseScreen
 
-class SettingsScreen(Screen):
+class SettingsScreen(BaseScreen):
     def __init__(self, **kwargs):
         super(SettingsScreen, self).__init__(**kwargs)
         
-        layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        # Set title using BaseScreen method
+        self.set_title("System Settings")
+        self.add_back_button(target_screen='main')
         
-        # Nadpis
-        layout.add_widget(Label(
-            text="System Settings",
-            font_size=24,
-            size_hint_y=0.1
-        ))
+        # Create content area for settings
+        content_area = self.create_content_area()
         
-        # Formulár nastavení
-        form_layout = BoxLayout(orientation='vertical', spacing=10, size_hint_y=0.7)
+        # Pridanie ScrollView pre obsah nastavení
+        scroll_view = ScrollView(size_hint_y=1)
+        
+        # Formulár nastavení vo vnútri ScrollView
+        form_layout = BoxLayout(orientation='vertical', spacing=10, size_hint_y=None)
+        form_layout.bind(minimum_height=form_layout.setter('height'))
         
         # Sieťové nastavenia
-        network_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=0.25)
+        network_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None, height=150)
         network_layout.add_widget(Label(text="Network Settings", font_size=18))
         
         # TCP Port
@@ -64,8 +67,103 @@ class SettingsScreen(Screen):
         
         form_layout.add_widget(network_layout)
         
+        # Email Notifications Settings
+        email_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None, height=270)
+        email_layout.add_widget(Label(text="Email Notifications", font_size=18))
+        
+        # Enable Email Notifications
+        email_enable_layout = BoxLayout(orientation='horizontal', spacing=5)
+        email_enable_layout.add_widget(Label(text="Enable Email:", size_hint_x=0.3))
+        self.email_enabled = Switch(active=get_setting("notifications.email", {}).get("enabled", False))
+        email_enable_wrapper = BoxLayout(orientation='horizontal', size_hint_x=0.7)
+        email_enable_wrapper.add_widget(Label(text="Off", size_hint_x=0.15))
+        email_enable_wrapper.add_widget(self.email_enabled)
+        email_enable_wrapper.add_widget(Label(text="On", size_hint_x=0.15))
+        email_enable_layout.add_widget(email_enable_wrapper)
+        email_layout.add_widget(email_enable_layout)
+        
+        # SMTP Server
+        smtp_server_layout = BoxLayout(orientation='horizontal', spacing=5)
+        smtp_server_layout.add_widget(Label(text="SMTP Server:", size_hint_x=0.3))
+        self.smtp_server = TextInput(
+            text=get_setting("notifications.email", {}).get("smtp_server", "smtp.gmail.com"),
+            multiline=False,
+            size_hint_x=0.7
+        )
+        smtp_server_layout.add_widget(self.smtp_server)
+        email_layout.add_widget(smtp_server_layout)
+        
+        # SMTP Port
+        smtp_port_layout = BoxLayout(orientation='horizontal', spacing=5)
+        smtp_port_layout.add_widget(Label(text="SMTP Port:", size_hint_x=0.3))
+        self.smtp_port = TextInput(
+            text=str(get_setting("notifications.email", {}).get("smtp_port", 587)),
+            multiline=False,
+            input_filter="int",
+            size_hint_x=0.7
+        )
+        smtp_port_layout.add_widget(self.smtp_port)
+        email_layout.add_widget(smtp_port_layout)
+        
+        # Username
+        username_layout = BoxLayout(orientation='horizontal', spacing=5)
+        username_layout.add_widget(Label(text="Username:", size_hint_x=0.3))
+        self.email_username = TextInput(
+            text=get_setting("notifications.email", {}).get("username", ""),
+            multiline=False,
+            size_hint_x=0.7
+        )
+        username_layout.add_widget(self.email_username)
+        email_layout.add_widget(username_layout)
+        
+        # Password
+        password_layout = BoxLayout(orientation='horizontal', spacing=5)
+        password_layout.add_widget(Label(text="Password:", size_hint_x=0.3))
+        self.email_password = TextInput(
+            text=get_setting("notifications.email", {}).get("password", ""),
+            multiline=False,
+            password=True,
+            size_hint_x=0.7
+        )
+        password_layout.add_widget(self.email_password)
+        email_layout.add_widget(password_layout)
+        
+        # From Email
+        from_email_layout = BoxLayout(orientation='horizontal', spacing=5)
+        from_email_layout.add_widget(Label(text="From Email:", size_hint_x=0.3))
+        self.from_email = TextInput(
+            text=get_setting("notifications.email", {}).get("from_email", ""),
+            multiline=False,
+            size_hint_x=0.7
+        )
+        from_email_layout.add_widget(self.from_email)
+        email_layout.add_widget(from_email_layout)
+        
+        # To Email
+        to_email_layout = BoxLayout(orientation='horizontal', spacing=5)
+        to_email_layout.add_widget(Label(text="To Email:", size_hint_x=0.3))
+        self.to_email = TextInput(
+            text=get_setting("notifications.email", {}).get("to_email", ""),
+            multiline=False,
+            size_hint_x=0.7
+        )
+        to_email_layout.add_widget(self.to_email)
+        email_layout.add_widget(to_email_layout)
+        
+        # Test Email Button
+        test_email_layout = BoxLayout(orientation='horizontal', spacing=5)
+        test_email_button = Button(
+            text="Test Email Settings",
+            size_hint_x=1.0
+        )
+        test_email_button.bind(on_release=self.test_email_settings)
+        test_email_layout.add_widget(test_email_button)
+        email_layout.add_widget(test_email_layout)
+        
+        form_layout.add_widget(email_layout)
+        
         # Alert Settings
-        alert_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=0.25)
+        alert_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None, height=150)
         alert_layout.add_widget(Label(text="Alert Settings", font_size=18))
         
         # Alert sound
@@ -105,7 +203,7 @@ class SettingsScreen(Screen):
         form_layout.add_widget(alert_layout)
         
         # Camera and Image Settings
-        image_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=0.25)
+        image_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None, height=150)
         image_layout.add_widget(Label(text="Image Settings", font_size=18))
         
         # Image storage path
@@ -145,7 +243,7 @@ class SettingsScreen(Screen):
         form_layout.add_widget(image_layout)
         
         # System Settings
-        system_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=0.25)
+        system_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None, height=150)
         system_layout.add_widget(Label(text="System Settings", font_size=18))
         
         # Auto start on boot
@@ -183,31 +281,106 @@ class SettingsScreen(Screen):
         
         form_layout.add_widget(system_layout)
         
-        layout.add_widget(form_layout)
+        # Pridanie form_layout do scroll_view
+        scroll_view.add_widget(form_layout)
+        content_area.add_widget(scroll_view)
         
         # Status message
         self.status_label = Label(
             text="",
             font_size=16,
-            size_hint_y=0.1
+            size_hint_y=0.05
         )
-        layout.add_widget(self.status_label)
+        content_area.add_widget(self.status_label)
         
-        # Tlačidlá
-        button_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=0.1)
+        # Create footer for buttons
+        footer = self.create_footer()
         
         save_button = Button(text="Save Settings")
         save_button.bind(on_release=self.save_settings)
-        button_layout.add_widget(save_button)
+        footer.add_widget(save_button)
         
-        back_button = Button(text="Back")
-        back_button.bind(on_release=self.go_back)
-        button_layout.add_widget(back_button)
-        
-        layout.add_widget(button_layout)
-        
-        self.add_widget(layout)
-        
+    def test_email_settings(self, instance):
+        """Test email settings by sending a test email"""
+        try:
+            # Načítanie aktuálnych nastavení
+            notifications = get_setting("notifications", {})
+            email_settings = notifications.get("email", {})
+            
+            # Aktualizácia nastavení pre test (bez ich uloženia)
+            email_settings = {
+                "enabled": True,
+                "smtp_server": self.smtp_server.text,
+                "smtp_port": int(self.smtp_port.text),
+                "username": self.email_username.text,
+                "password": self.email_password.text,
+                "from_email": self.from_email.text or self.email_username.text,
+                "to_email": self.to_email.text
+            }
+            
+            # Kontrola, či sú všetky potrebné polia vyplnené
+            if not all([
+                email_settings["smtp_server"],
+                email_settings["username"],
+                email_settings["password"],
+                email_settings["to_email"]
+            ]):
+                self.status_label.text = "Vyplňte všetky potrebné polia pre email"
+                return
+            
+            # Import a použitie notifikačnej služby
+            from notification_service import notification_service
+            
+            # Vytvorenie obsahu testového emailu
+            subject = "Test bezpečnostného systému"
+            message = "Toto je testovací email z bezpečnostného systému. Ak ste ho dostali, vaše nastavenia emailu fungujú správne."
+            
+            # Dočasné nastavenie
+            temp_notifications = {"email": email_settings}
+            
+            # Zobrazenie informácie používateľovi
+            self.status_label.text = "Odosielam testovací email..."
+            
+            # Volať funkcie notifikačnej služby priamo
+            import threading
+            def test_thread():
+                try:
+                    # Použitie upravených nastavení
+                    original_get_setting = notification_service.get_setting
+                    
+                    def mock_get_setting(key, default=None):
+                        if key == "notifications.email":
+                            return email_settings
+                        elif key == "notifications.email.enabled":
+                            return True
+                        else:
+                            return original_get_setting(key, default)
+                    
+                    # Nahradenie get_setting funkcie
+                    notification_service.get_setting = mock_get_setting
+                    
+                    # Odoslanie testovacieho emailu
+                    success = notification_service.send_email_alert(subject, message)
+                    
+                    # Obnovenie pôvodnej funkcie
+                    notification_service.get_setting = original_get_setting
+                    
+                    # Aktualizovanie stavu
+                    if success:
+                        self.status_label.text = "Testovací email úspešne odoslaný!"
+                    else:
+                        self.status_label.text = "Odoslanie testovacieho emailu zlyhalo"
+                except Exception as e:
+                    self.status_label.text = f"Chyba pri odosielaní emailu: {str(e)}"
+            
+            # Spustenie v samostatnom vlákne
+            test_thread = threading.Thread(target=test_thread)
+            test_thread.daemon = True
+            test_thread.start()
+            
+        except Exception as e:
+            self.status_label.text = f"Chyba pri testovaní emailu: {str(e)}"
+
     def save_settings(self, instance):
         """Uloženie nastavení do súboru"""
         try:
@@ -224,6 +397,22 @@ class SettingsScreen(Screen):
             alerts["notification_type"] = self.notification_type.text
             alerts["retention_days"] = int(self.retention_days.text)
             update_setting("alerts", alerts)
+            
+            # Aktualizácia emailových nastavení
+            notifications = get_setting("notifications", {})
+            email_settings = notifications.get("email", {})
+            email_settings["enabled"] = self.email_enabled.active
+            email_settings["smtp_server"] = self.smtp_server.text
+            email_settings["smtp_port"] = int(self.smtp_port.text)
+            email_settings["username"] = self.email_username.text
+            email_settings["password"] = self.email_password.text
+            email_settings["from_email"] = self.from_email.text
+            email_settings["to_email"] = self.to_email.text
+            
+            if "notifications" not in get_setting("", {}):
+                update_setting("notifications", {})
+            
+            update_setting("notifications.email", email_settings)
             
             # Aktualizácia nastavení obrázkov
             images = get_setting("images", {})
@@ -248,5 +437,5 @@ class SettingsScreen(Screen):
             print(f"ERROR: Zlyhalo uloženie nastavení: {e}")
         
     def go_back(self, instance):
-        """Návrat na hlavnú obrazovku"""
-        self.manager.current = 'main'
+        """Navigate back to main screen"""
+        self.go_to_screen('main')

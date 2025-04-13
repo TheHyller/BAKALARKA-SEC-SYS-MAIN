@@ -6,7 +6,7 @@ from login_screen import LoginScreen
 from settings_screen import SettingsScreen
 from alerts_screen import AlertsScreen
 from dashboard_screen import DashboardScreen
-from listeners import DiscoveryListener, UDPListener, TCPListener
+from network import network_manager
 from kivy.core.text import LabelBase
 from kivy.core.window import Window
 from kivy.config import Config
@@ -14,11 +14,11 @@ from theme_helper import COLORS, style_screen
 from web_app import web_app
 import kivy
 
-# Set Kivy configuration before app starts
-kivy.require('2.0.0')  # Replace with your version if different
+# Nastavenie konfigurácie Kivy pred spustením aplikácie
+kivy.require('2.0.0')  
 Config.set('kivy', 'default_font', ['Roboto', 'data/fonts/Roboto-Regular.ttf', 'data/fonts/Roboto-Italic.ttf', 'data/fonts/Roboto-Bold.ttf', 'data/fonts/Roboto-BoldItalic.ttf'])
 Config.set('graphics', 'window_state', 'maximized')
-Config.set('input', 'mouse', 'mouse,multitouch_on_demand')  # Better mouse behavior
+Config.set('input', 'mouse', 'mouse,multitouch_on_demand') 
 Config.set('graphics', 'width', '1280')
 Config.set('graphics', 'height', '720')
 Config.write()
@@ -27,34 +27,26 @@ class MainApp(App):
     title = 'Security System'
     
     def build(self):
-        # Ensure the window has white background
+        # Zabezpečenie, že okno má biele pozadie
         Window.clearcolor = COLORS['background']
         
-        # Load application settings
+        # Načítanie nastavení aplikácie
         settings = load_settings()
         print("DEBUG: Aplikácia sa spúšťa s načítanými nastaveniami")
         
-        # Start network listeners
-        self.discovery_listener = DiscoveryListener()
-        self.discovery_listener.start()
-        
-        self.udp_listener = UDPListener()
-        self.udp_listener.start()
-        
-        self.tcp_listener = TCPListener()
-        self.tcp_listener.start()
-        
+        # Spustenie sieťových poslucháčov pomocou NetworkManager
+        network_manager.start_listeners()
         print("DEBUG: Sieťoví poslucháči spustení pre komunikáciu so senzormi")
         
-        # Start web application server
+        # Spustenie webového aplikačného servera
         self.web_app = web_app
         self.web_app.start()
         print(f"DEBUG: Webová aplikácia spustená na porte {self.web_app.port}")
         
-        # Create and configure the screen manager
+        # Vytvorenie a konfigurácia správcu obrazoviek
         self.sm = ScreenManager()
         
-        # Create all application screens
+        # Vytvorenie všetkých obrazoviek aplikácie
         screens = [
             LoginScreen(name='login'),
             MainScreen(name='main'),
@@ -63,32 +55,27 @@ class MainApp(App):
             DashboardScreen(name='dashboard')
         ]
         
-        # Apply theme to all screens before adding them to the manager
+        # Aplikácia témy na všetky obrazovky pred ich pridaním do správcu
         for screen in screens:
             style_screen(screen)
             self.sm.add_widget(screen)
         
-        # Set the initial screen
+        # Nastavenie počiatočnej obrazovky
         self.sm.current = 'login'
         
         return self.sm
     
     def on_start(self):
-        """Called after the application starts"""
-        # Ensure the theme is completely applied
+        """Volané po spustení aplikácie"""
+        # Zabezpečenie, že téma je úplne aplikovaná
         style_screen(self.sm)
     
     def on_stop(self):
-        """Called when the application is closing"""
-        # Stop all network listeners
-        if hasattr(self, 'discovery_listener'):
-            self.discovery_listener.stop()
-        if hasattr(self, 'udp_listener'):
-            self.udp_listener.stop()
-        if hasattr(self, 'tcp_listener'):
-            self.tcp_listener.stop()
+        """Volané pri zatváraní aplikácie"""
+        # Zastavenie všetkých sieťových poslucháčov pomocou NetworkManager
+        network_manager.stop_listeners()
         
-        # Stop web application server
+        # Zastavenie webového aplikačného servera
         if hasattr(self, 'web_app'):
             self.web_app.stop()
         

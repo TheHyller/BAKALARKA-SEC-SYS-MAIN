@@ -1,4 +1,4 @@
-from kivy.uix.screenmanager import Screen
+from base_screen import BaseScreen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
@@ -6,41 +6,37 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.image import Image
 from kivy.uix.popup import Popup
+from kivy.uix.textinput import TextInput
 from kivy.clock import Clock
 from datetime import datetime
 import os
 from config.settings import get_alerts, mark_alert_as_read, get_setting
 
-class AlertsScreen(Screen):
+class AlertsScreen(BaseScreen):
     def __init__(self, **kwargs):
         super(AlertsScreen, self).__init__(**kwargs)
         
-        layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        # Nastavenie titulku a tlačidla späť
+        self.set_title("System Alerts")
+        self.add_back_button('main')
         
-        # Nadpis
-        header_layout = BoxLayout(orientation='horizontal', size_hint_y=0.1)
-        header_layout.add_widget(Label(
-            text="System Alerts",
-            font_size=24,
-            size_hint_x=0.7
-        ))
-        
-        # Tlačidlo na obnovenie
+        # Pridanie tlačidla na obnovenie do hlavičky
         refresh_button = Button(
             text="Refresh",
             size_hint_x=0.3
         )
         refresh_button.bind(on_release=self.refresh_alerts)
-        header_layout.add_widget(refresh_button)
+        self.header.add_widget(refresh_button)
         
-        layout.add_widget(header_layout)
+        # Vytvorenie oblasti obsahu
+        content_area = self.create_content_area()
         
         # Zoznam upozornení
-        scroll_view = ScrollView(size_hint_y=0.7)
+        scroll_view = ScrollView(size_hint_y=0.9)
         self.alerts_list = GridLayout(cols=1, spacing=10, size_hint_y=None)
         self.alerts_list.bind(minimum_height=self.alerts_list.setter('height'))
         scroll_view.add_widget(self.alerts_list)
-        layout.add_widget(scroll_view)
+        content_area.add_widget(scroll_view)
         
         # Štatistiky upozornení
         self.stats_label = Label(
@@ -48,26 +44,17 @@ class AlertsScreen(Screen):
             font_size=16,
             size_hint_y=0.1
         )
-        layout.add_widget(self.stats_label)
+        content_area.add_widget(self.stats_label)
         
-        # Tlačidlá
-        buttons_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=0.1)
+        # Vytvorenie päty
+        footer = self.create_footer()
         
-        back_button = Button(
-            text="Back to Main"
-        )
-        back_button.bind(on_release=self.go_back)
-        
+        # Tlačidlo označiť všetko ako prečítané
         clear_button = Button(
             text="Mark All Read"
         )
         clear_button.bind(on_release=self.mark_all_read)
-        
-        buttons_layout.add_widget(back_button)
-        buttons_layout.add_widget(clear_button)
-        layout.add_widget(buttons_layout)
-        
-        self.add_widget(layout)
+        footer.add_widget(clear_button)
         
         # Naplánuj automatické obnovovanie
         Clock.schedule_interval(self.refresh_alerts, 30)  # Obnovenie každých 30 sekúnd
@@ -349,7 +336,150 @@ class AlertsScreen(Screen):
         
         button.bind(on_release=popup.dismiss)
         popup.open()
+
+class GracePeriodAlert(Popup):
+    """Popup alert showing grace period countdown before full alarm triggers"""
+    
+    def __init__(self, alert_data, grace_seconds=30, **kwargs):
+        self.alert_data = alert_data
+        self.grace_seconds = grace_seconds
+        self.time_remaining = grace_seconds
+        self.pin_input = ""
         
-    def go_back(self, instance):
-        """Návrat na hlavnú obrazovku"""
-        self.manager.current = 'main'
+        # Create the popup content
+        content = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        
+        # Warning header
+        warning_label = Label(
+            text="SECURITY ALERT!",
+            font_size=24,
+            bold=True,
+            color=(1, 0, 0, 1),
+            size_hint_y=0.15
+        )
+        content.add_widget(warning_label)
+        
+        # Alert details
+        device_name = alert_data.get('device_name', 'Unknown Device')
+        sensor_type = alert_data.get('sensor_type', 'unknown').capitalize()
+        status = alert_data.get('status', 'UNKNOWN')
+        
+        details_label = Label(
+            text=f"{sensor_type} sensor {status}\nDevice: {device_name}",
+            font_size=18,
+            halign='center',
+            size_hint_y=0.2
+        )
+        content.add_widget(details_label)
+        
+        # Countdown timer
+        self.countdown_label = Label(
+            text=f"System will alarm in {self.time_remaining} seconds",
+            font_size=20,
+            bold=True,
+            color=(1, 0.3, 0.3, 1),
+            size_hint_y=0.15
+        )
+        content.add_widget(self.countdown_label)
+        
+        # PIN input field
+        pin_layout = BoxLayout(orientation='horizontal', size_hint_y=0.2)
+        pin_layout.add_widget(Label(text="Enter PIN:", size_hint_x=0.3))
+        
+        self.pin_display = TextInput(
+            password=True,
+            multiline=False,
+            readonly=True,
+            font_size=18,
+            size_hint_x=0.7,
+            text=""
+        )
+        pin_layout.add_widget(self.pin_display)
+        content.add_widget(pin_layout)
+        
+        # Numeric keypad
+        keypad = GridLayout(cols=3, spacing=5, size_hint_y=0.5)
+        
+        # Add number buttons 1-9
+        for i in range(1, 10):
+            btn = Button(text=str(i), font_size=18)
+            btn.bind(on_release=self.on_number_press)
+            keypad.add_widget(btn)
+            
+        # Add Clear, 0, and Enter buttons
+        clear_btn = Button(text="Clear", font_size=16)
+        clear_btn.bind(on_release=self.on_clear)
+        keypad.add_widget(clear_btn)
+        
+        zero_btn = Button(text="0", font_size=18)
+        zero_btn.bind(on_release=self.on_number_press)
+        keypad.add_widget(zero_btn)
+        
+        enter_btn = Button(text="Enter", font_size=16)
+        enter_btn.bind(on_release=self.on_enter)
+        keypad.add_widget(enter_btn)
+        
+        content.add_widget(keypad)
+        
+        # Initialize the popup
+        super(GracePeriodAlert, self).__init__(
+            title="Security System Alert",
+            content=content,
+            size_hint=(0.8, 0.7),
+            auto_dismiss=False,
+            **kwargs
+        )
+        
+        # Start countdown
+        Clock.schedule_interval(self.update_countdown, 1)
+    
+    def on_number_press(self, instance):
+        """Handle number button press"""
+        self.pin_input += instance.text
+        self.pin_display.text = "*" * len(self.pin_input)
+    
+    def on_clear(self, instance):
+        """Clear PIN input"""
+        self.pin_input = ""
+        self.pin_display.text = ""
+    
+    def on_enter(self, instance):
+        """Validate PIN and disable system if correct"""
+        from config.settings import validate_pin, toggle_system_state
+        
+        if validate_pin(self.pin_input):
+            # Pin is correct, disable the system
+            toggle_system_state(False)
+            
+            # Show confirmation and close
+            self.countdown_label.text = "System disabled"
+            self.countdown_label.color = (0, 0.7, 0, 1)
+            
+            # Stop the countdown
+            Clock.unschedule(self.update_countdown)
+            
+            # Close after 2 seconds
+            Clock.schedule_once(lambda dt: self.dismiss(), 2)
+        else:
+            # Pin is incorrect, show error
+            self.countdown_label.text = f"Incorrect PIN! {self.time_remaining}s remaining"
+            self.countdown_label.color = (1, 0.3, 0.3, 1)
+            self.pin_input = ""
+            self.pin_display.text = ""
+    
+    def update_countdown(self, dt):
+        """Update countdown timer"""
+        self.time_remaining -= 1
+        
+        if self.time_remaining <= 0:
+            # Time's up, close popup (alarm will be triggered by notification service)
+            Clock.unschedule(self.update_countdown)
+            self.dismiss()
+            return False
+        
+        # Update countdown text
+        if "Incorrect PIN" not in self.countdown_label.text:
+            self.countdown_label.text = f"System will alarm in {self.time_remaining} seconds"
+        else:
+            self.countdown_label.text = f"Incorrect PIN! {self.time_remaining}s remaining"
+        return True

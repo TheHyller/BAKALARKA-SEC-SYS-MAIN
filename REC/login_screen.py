@@ -1,5 +1,5 @@
 # Inicializácia balíka
-from kivy.uix.screenmanager import Screen
+from base_screen import BaseScreen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.button import Button
@@ -7,18 +7,15 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.textinput import TextInput
 from config.settings import validate_pin
 
-class LoginScreen(Screen):
+class LoginScreen(BaseScreen):
     def __init__(self, **kwargs):
         super(LoginScreen, self).__init__(**kwargs)
         
-        layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        # Nastavenie titulku
+        self.set_title("Security System Login")
         
-        # Nadpis
-        layout.add_widget(Label(
-            text="Security System Login",
-            font_size=24,
-            size_hint_y=0.2
-        ))
+        # Vytvorenie oblasti obsahu
+        content_area = self.create_content_area()
         
         # Vstupné pole pre PIN
         self.pin_input = ""
@@ -30,7 +27,7 @@ class LoginScreen(Screen):
             password=True,
             size_hint_y=0.1
         )
-        layout.add_widget(self.pin_display)
+        content_area.add_widget(self.pin_display)
         
         # Klávesnica
         keypad_layout = GridLayout(cols=3, spacing=[10, 10], size_hint_y=0.5)
@@ -54,7 +51,7 @@ class LoginScreen(Screen):
         btn_enter.bind(on_release=self.on_enter_pressed)
         keypad_layout.add_widget(btn_enter)
         
-        layout.add_widget(keypad_layout)
+        content_area.add_widget(keypad_layout)
         
         # Stavová správa
         self.status_label = Label(
@@ -62,9 +59,7 @@ class LoginScreen(Screen):
             font_size=18,
             size_hint_y=0.2
         )
-        layout.add_widget(self.status_label)
-        
-        self.add_widget(layout)
+        content_area.add_widget(self.status_label)
     
     # Oprava: Toto by malo byť správne pomenované, aby sa predišlo konfliktu s udalosťou Kivy on_enter
     def on_enter_pressed(self, instance):
