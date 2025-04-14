@@ -15,7 +15,7 @@ class SettingsScreen(BaseScreen):
         super(SettingsScreen, self).__init__(**kwargs)
         
         # Set title using BaseScreen method
-        self.set_title("System Settings")
+        self.set_title("Systémové nastavenia")
         self.add_back_button(target_screen='main')
         
         # Create content area for settings
@@ -30,7 +30,7 @@ class SettingsScreen(BaseScreen):
         
         # Sieťové nastavenia
         network_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None, height=150)
-        network_layout.add_widget(Label(text="Network Settings", font_size=18))
+        network_layout.add_widget(Label(text="Sieťové nastavenia", font_size=18))
         
         # TCP Port
         tcp_layout = BoxLayout(orientation='horizontal', spacing=5)
@@ -69,16 +69,16 @@ class SettingsScreen(BaseScreen):
         
         # Email Notifications Settings
         email_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None, height=270)
-        email_layout.add_widget(Label(text="Email Notifications", font_size=18))
+        email_layout.add_widget(Label(text="Emailové notifikácie", font_size=18))
         
         # Enable Email Notifications
         email_enable_layout = BoxLayout(orientation='horizontal', spacing=5)
-        email_enable_layout.add_widget(Label(text="Enable Email:", size_hint_x=0.3))
+        email_enable_layout.add_widget(Label(text="Povoliť email:", size_hint_x=0.3))
         self.email_enabled = Switch(active=get_setting("notifications.email", {}).get("enabled", False))
         email_enable_wrapper = BoxLayout(orientation='horizontal', size_hint_x=0.7)
-        email_enable_wrapper.add_widget(Label(text="Off", size_hint_x=0.15))
+        email_enable_wrapper.add_widget(Label(text="Vyp", size_hint_x=0.15))
         email_enable_wrapper.add_widget(self.email_enabled)
-        email_enable_wrapper.add_widget(Label(text="On", size_hint_x=0.15))
+        email_enable_wrapper.add_widget(Label(text="Zap", size_hint_x=0.15))
         email_enable_layout.add_widget(email_enable_wrapper)
         email_layout.add_widget(email_enable_layout)
         
@@ -107,7 +107,7 @@ class SettingsScreen(BaseScreen):
         
         # Username
         username_layout = BoxLayout(orientation='horizontal', spacing=5)
-        username_layout.add_widget(Label(text="Username:", size_hint_x=0.3))
+        username_layout.add_widget(Label(text="Používateľské meno:", size_hint_x=0.3))
         self.email_username = TextInput(
             text=get_setting("notifications.email", {}).get("username", ""),
             multiline=False,
@@ -118,7 +118,7 @@ class SettingsScreen(BaseScreen):
         
         # Password
         password_layout = BoxLayout(orientation='horizontal', spacing=5)
-        password_layout.add_widget(Label(text="Password:", size_hint_x=0.3))
+        password_layout.add_widget(Label(text="Heslo:", size_hint_x=0.3))
         self.email_password = TextInput(
             text=get_setting("notifications.email", {}).get("password", ""),
             multiline=False,
@@ -130,7 +130,7 @@ class SettingsScreen(BaseScreen):
         
         # From Email
         from_email_layout = BoxLayout(orientation='horizontal', spacing=5)
-        from_email_layout.add_widget(Label(text="From Email:", size_hint_x=0.3))
+        from_email_layout.add_widget(Label(text="Odosielateľ:", size_hint_x=0.3))
         self.from_email = TextInput(
             text=get_setting("notifications.email", {}).get("from_email", ""),
             multiline=False,
@@ -141,7 +141,7 @@ class SettingsScreen(BaseScreen):
         
         # To Email
         to_email_layout = BoxLayout(orientation='horizontal', spacing=5)
-        to_email_layout.add_widget(Label(text="To Email:", size_hint_x=0.3))
+        to_email_layout.add_widget(Label(text="Príjemca:", size_hint_x=0.3))
         self.to_email = TextInput(
             text=get_setting("notifications.email", {}).get("to_email", ""),
             multiline=False,
@@ -153,7 +153,7 @@ class SettingsScreen(BaseScreen):
         # Test Email Button
         test_email_layout = BoxLayout(orientation='horizontal', spacing=5)
         test_email_button = Button(
-            text="Test Email Settings",
+            text="Otestovať emailové nastavenia",
             size_hint_x=1.0
         )
         test_email_button.bind(on_release=self.test_email_settings)
@@ -164,25 +164,25 @@ class SettingsScreen(BaseScreen):
         
         # Alert Settings
         alert_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None, height=150)
-        alert_layout.add_widget(Label(text="Alert Settings", font_size=18))
+        alert_layout.add_widget(Label(text="Nastavenia upozornení", font_size=18))
         
         # Alert sound
         sound_layout = BoxLayout(orientation='horizontal', spacing=5)
-        sound_layout.add_widget(Label(text="Alert Sound:", size_hint_x=0.3))
+        sound_layout.add_widget(Label(text="Zvuk upozornenia:", size_hint_x=0.3))
         self.alert_sound = Switch(active=get_setting("alerts", {}).get("sound_enabled", True))
         sound_wrapper = BoxLayout(orientation='horizontal', size_hint_x=0.7)
-        sound_wrapper.add_widget(Label(text="Off", size_hint_x=0.15))
+        sound_wrapper.add_widget(Label(text="Vyp", size_hint_x=0.15))
         sound_wrapper.add_widget(self.alert_sound)
-        sound_wrapper.add_widget(Label(text="On", size_hint_x=0.15))
+        sound_wrapper.add_widget(Label(text="Zap", size_hint_x=0.15))
         sound_layout.add_widget(sound_wrapper)
         alert_layout.add_widget(sound_layout)
         
         # Alert notification type
         notification_layout = BoxLayout(orientation='horizontal', spacing=5)
-        notification_layout.add_widget(Label(text="Notification Type:", size_hint_x=0.3))
+        notification_layout.add_widget(Label(text="Typ notifikácie:", size_hint_x=0.3))
         self.notification_type = Spinner(
             text=get_setting("alerts", {}).get("notification_type", "Visual"),
-            values=("Visual", "Visual + Sound", "Full Screen"),
+            values=("Vizuálna", "Vizuálna + Zvuk", "Celá obrazovka"),
             size_hint_x=0.7
         )
         notification_layout.add_widget(self.notification_type)
@@ -190,7 +190,7 @@ class SettingsScreen(BaseScreen):
         
         # Alert history retention
         retention_layout = BoxLayout(orientation='horizontal', spacing=5)
-        retention_layout.add_widget(Label(text="History (days):", size_hint_x=0.3))
+        retention_layout.add_widget(Label(text="História (dni):", size_hint_x=0.3))
         self.retention_days = TextInput(
             text=str(get_setting("alerts", {}).get("retention_days", 30)),
             multiline=False,
@@ -204,11 +204,11 @@ class SettingsScreen(BaseScreen):
         
         # Camera and Image Settings
         image_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None, height=150)
-        image_layout.add_widget(Label(text="Image Settings", font_size=18))
+        image_layout.add_widget(Label(text="Nastavenia obrázkov", font_size=18))
         
         # Image storage path
         path_layout = BoxLayout(orientation='horizontal', spacing=5)
-        path_layout.add_widget(Label(text="Storage Path:", size_hint_x=0.3))
+        path_layout.add_widget(Label(text="Cesta úložiska:", size_hint_x=0.3))
         self.storage_path = TextInput(
             text=get_setting("images", {}).get("storage_path", "captures"),
             multiline=False,
@@ -219,7 +219,7 @@ class SettingsScreen(BaseScreen):
         
         # Image retention
         img_retention_layout = BoxLayout(orientation='horizontal', spacing=5)
-        img_retention_layout.add_widget(Label(text="Keep Images (days):", size_hint_x=0.3))
+        img_retention_layout.add_widget(Label(text="Uchovať obrázky (dni):", size_hint_x=0.3))
         self.img_retention_days = TextInput(
             text=str(get_setting("images", {}).get("retention_days", 14)),
             multiline=False,
@@ -231,10 +231,10 @@ class SettingsScreen(BaseScreen):
         
         # Image quality
         quality_layout = BoxLayout(orientation='horizontal', spacing=5)
-        quality_layout.add_widget(Label(text="Image Quality:", size_hint_x=0.3))
+        quality_layout.add_widget(Label(text="Kvalita obrázkov:", size_hint_x=0.3))
         self.image_quality = Spinner(
             text=get_setting("images", {}).get("quality", "Medium"),
-            values=("Low", "Medium", "High"),
+            values=("Nízka", "Stredná", "Vysoká"),
             size_hint_x=0.7
         )
         quality_layout.add_widget(self.image_quality)
@@ -244,22 +244,22 @@ class SettingsScreen(BaseScreen):
         
         # System Settings
         system_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None, height=150)
-        system_layout.add_widget(Label(text="System Settings", font_size=18))
+        system_layout.add_widget(Label(text="Systémové nastavenia", font_size=18))
         
         # Auto start on boot
         autostart_layout = BoxLayout(orientation='horizontal', spacing=5)
-        autostart_layout.add_widget(Label(text="Auto Start:", size_hint_x=0.3))
+        autostart_layout.add_widget(Label(text="Automatický štart:", size_hint_x=0.3))
         self.auto_start = Switch(active=get_setting("system", {}).get("auto_start", True))
         autostart_wrapper = BoxLayout(orientation='horizontal', size_hint_x=0.7)
-        autostart_wrapper.add_widget(Label(text="Off", size_hint_x=0.15))
+        autostart_wrapper.add_widget(Label(text="Vyp", size_hint_x=0.15))
         autostart_wrapper.add_widget(self.auto_start)
-        autostart_wrapper.add_widget(Label(text="On", size_hint_x=0.15))
+        autostart_wrapper.add_widget(Label(text="Zap", size_hint_x=0.15))
         autostart_layout.add_widget(autostart_wrapper)
         system_layout.add_widget(autostart_layout)
         
         # Log level
         log_layout = BoxLayout(orientation='horizontal', spacing=5)
-        log_layout.add_widget(Label(text="Log Level:", size_hint_x=0.3))
+        log_layout.add_widget(Label(text="Úroveň logu:", size_hint_x=0.3))
         self.log_level = Spinner(
             text=get_setting("system", {}).get("log_level", "INFO"),
             values=("DEBUG", "INFO", "WARNING", "ERROR"),
@@ -270,7 +270,7 @@ class SettingsScreen(BaseScreen):
         
         # Configuration format
         config_layout = BoxLayout(orientation='horizontal', spacing=5)
-        config_layout.add_widget(Label(text="Config Format:", size_hint_x=0.3))
+        config_layout.add_widget(Label(text="Formát konfigurácie:", size_hint_x=0.3))
         self.config_format = Spinner(
             text=get_setting("system", {}).get("config_format", "JSON"),
             values=("JSON", "YAML"),
@@ -296,7 +296,7 @@ class SettingsScreen(BaseScreen):
         # Create footer for buttons
         footer = self.create_footer()
         
-        save_button = Button(text="Save Settings")
+        save_button = Button(text="Uložiť nastavenia")
         save_button.bind(on_release=self.save_settings)
         footer.add_widget(save_button)
         
@@ -430,10 +430,10 @@ class SettingsScreen(BaseScreen):
             
             # Uloženie všetkých nastavení
             save_settings()
-            self.status_label.text = "Settings saved successfully!"
+            self.status_label.text = "Nastavenia úspešne uložené!"
             print("DEBUG: Nastavenia úspešne uložené")
         except Exception as e:
-            self.status_label.text = f"Error saving settings: {str(e)}"
+            self.status_label.text = f"Chyba pri ukladaní nastavení: {str(e)}"
             print(f"ERROR: Zlyhalo uloženie nastavení: {e}")
         
     def go_back(self, instance):

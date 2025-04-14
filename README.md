@@ -1,62 +1,63 @@
 # BAKALARKA-SEC-SYS-MAIN
-Home Security System - Bachelor Thesis Project
+Domáci bezpečnostný systém - Bakalárska práca
 
-A comprehensive security solution with real-time monitoring, multi-device support, web interface, alert management, and flexible configuration options.
+Komplexné bezpečnostné riešenie s monitorovaním v reálnom čase, podporou viacerých zariadení, webovým rozhraním, správou upozornení a flexibilnými možnosťami konfigurácie.
 
-## 🔐 Overview
+## 🔐 Prehľad
 
-This project is a complete home security system with two main components:
-1. **Sender (SEND)**: Runs on Raspberry Pi to detect motion, capture images, and send alerts
-2. **Receiver (REC)**: Provides monitoring through both desktop GUI and web interfaces with real-time alerts and configuration management
+Tento projekt je kompletný domáci bezpečnostný systém s dvoma hlavnými komponentmi:
+1. **Odosielateľ (SEND)**: Beží na Raspberry Pi na detekciu pohybu, zachytávanie obrázkov a odosielanie upozornení
+2. **Prijímač (REC)**: Poskytuje monitorovanie prostredníctvom desktopového grafického rozhrania aj webového rozhrania s upozorneniami v reálnom čase a správou nastavení
 
-## ✨ Features
+## ✨ Funkcie
 
-### Sender Component (SEND)
-- Motion detection using Raspberry Pi GPIO sensors
-- Image capture with PiCamera on security events
-- Door and window sensor integration
-- Network discovery for easy setup
-- Real-time alerts and status updates
-- Unique device identification for multi-device systems
-- Persistent logging with security_sender.log
+### Komponent odosielateľa (SEND)
+- Detekcia pohybu pomocou GPIO senzorov Raspberry Pi
+- Zachytávanie obrázkov pomocou PiCamera pri bezpečnostných udalostiach
+- Integrácia senzorov dverí a okien
+- Sieťové vyhľadávanie pre jednoduché nastavenie
+- Upozornenia a aktualizácie stavu v reálnom čase
+- Jedinečná identifikácia zariadenia pre systémy s viacerými zariadeniami
+- Trvalé protokolovanie so súborom security_sender.log
 
-### Receiver Component (REC)
-- Secure PIN-based authentication system
-- Real-time sensor status dashboard
-- Multi-platform support:
-  - Desktop GUI with Kivy/KivyMD
-  - Web interface with responsive design
-- Support for multiple sensor devices with unique IDs
-- Alert history and management
-- Image capture review
-- Notification service with audio alerts
-- Customizable system settings
-- TCP/UDP network communication
-- Auto-discovery of sender devices
+### Komponent prijímača (REC)
+- Zabezpečený autentifikačný systém založený na PIN kóde
+- Dashboard stavu senzorov v reálnom čase
+- Podpora viacerých platforiem:
+  - Desktopové grafické rozhranie pomocou Kivy/KivyMD
+  - Webové rozhranie s responzívnym dizajnom
+- Podpora viacerých senzorových zariadení s jedinečnými ID
+- História a správa upozornení
+- Prehliadanie zachytených obrázkov
+- Notifikačná služba so zvukovými upozorneniami
+- Prispôsobiteľné systémové nastavenia
+- TCP/UDP sieťová komunikácia
+- Automatické vyhľadávanie odosielacích zariadení
+- Kompletné slovenské používateľské rozhranie
 
-## 🚀 Installation
+## 🚀 Inštalácia
 
-### Prerequisites
-- Python 3.8 or higher
-- Raspberry Pi (for the sender component)
-- Camera module (for the sender component)
-- Motion sensors, door sensors, and window sensors (optional)
+### Požiadavky
+- Python 3.8 alebo vyšší
+- Raspberry Pi (pre komponent odosielateľa)
+- Kamerový modul (pre komponent odosielateľa)
+- Pohybové senzory, senzory dverí a senzory okien (voliteľné)
 
-### Step 1: Clone the repository
+### Krok 1: Klonovanie repozitára
 ```bash
 git clone https://github.com/yourusername/BAKALARKA-SEC-SYS-MAIN.git
 cd BAKALARKA-SEC-SYS-MAIN
 ```
 
-### Step 2: Install dependencies
+### Krok 2: Inštalácia závislostí
 ```bash
 pip install -r requirements.txt
 ```
 
-## ⚙️ Configuration
+## ⚙️ Konfigurácia
 
-### Receiver Configuration
-The system uses JSON configuration files located in the `REC/config` directory:
+### Konfigurácia prijímača
+Systém používa konfiguračné súbory JSON umiestnené v adresári `REC/config`:
 
 ```json
 {
@@ -71,8 +72,8 @@ The system uses JSON configuration files located in the `REC/config` directory:
 }
 ```
 
-### Sender Configuration
-The sender uses a `sender_config.json` file in the root directory:
+### Konfigurácia odosielateľa
+Odosielateľ používa súbor `sender_config.json` v koreňovom adresári:
 
 ```json
 {
@@ -95,120 +96,132 @@ The sender uses a `sender_config.json` file in the root directory:
 }
 ```
 
-## 📱 Usage
+## 📱 Použitie
 
-### Running the Sender (on Raspberry Pi)
+### Spustenie odosielateľa (na Raspberry Pi)
 ```bash
 python -m SEND.SEND
 ```
 
-### Running the Receiver (desktop interface)
+### Spustenie prijímača (desktopové rozhranie)
 ```bash
 python -m REC.main
 ```
 
-### Accessing the Web Interface
-Once the receiver is running, access the web interface at:
+### Prístup k webovému rozhraniu
+Po spustení prijímača pristupujte k webovému rozhraniu na:
 ```
-http://localhost:8080
+http://localhost:8090
 ```
-or replace localhost with the IP address of the system running the receiver.
+alebo nahraďte localhost IP adresou systému, na ktorom beží prijímač.
 
-### Basic Operation
-1. Log in using the PIN code (default: 0000)
-2. Use the dashboard to monitor sensor status
-3. Activate/deactivate the system using the toggle button
-4. View alerts and captured images
-5. Configure settings as needed
+### Základné operácie
+1. Prihláste sa pomocou PIN kódu (predvolený: 0000)
+2. Použite dashboard na monitorovanie stavu senzorov
+3. Aktivujte/deaktivujte systém pomocou prepínacieho tlačidla
+4. Prezerajte upozornenia a zachytené obrázky
+5. Podľa potreby nakonfigurujte nastavenia
 
-## 🏗️ Architecture
+## 🏗️ Architektúra
 
-The system architecture consists of:
+Architektúra systému pozostáva z:
 
-- **REC module**: 
-  - Desktop GUI built with Kivy/KivyMD
-  - Web interface with Flask
-  - Login authentication
-  - Dashboard screen for sensor monitoring
-  - Alert history and management
-  - Settings management
-  - Notification service with audio alerts
-  - Network listeners for sensor data
+- **Modul REC**: 
+  - Desktopové grafické rozhranie postavené na Kivy/KivyMD
+  - Webové rozhranie s Flaskom
+  - Prihlasovacia autentifikácia
+  - Obrazovka dashboardu na monitorovanie senzorov
+  - História a správa upozornení
+  - Správa nastavení
+  - Notifikačná služba so zvukovými upozorneniami
+  - Sieťoví poslucháči pre údaje zo senzorov
 
-- **SEND module**: 
-  - Sensor interface for Raspberry Pi
-  - Motion, door, and window sensor integration
-  - Camera control for image capture
-  - Network communication with the receiver
-  - Status broadcasting and server discovery
+- **Modul SEND**: 
+  - Rozhranie senzorov pre Raspberry Pi
+  - Integrácia senzorov pohybu, dverí a okien
+  - Ovládanie kamery na zachytávanie obrázkov
+  - Sieťová komunikácia s prijímačom
+  - Vysielanie stavu a objavovanie servera
 
-## 👨‍💻 Development
+## 👨‍💻 Vývoj
 
-### Project Structure
+### Štruktúra projektu
 ```
-├── LICENSE                   # License file
-├── README.md                 # Project documentation
-├── requirements.txt          # Common dependencies
-├── security_sender.log       # Sender log file
-├── sender_config.json        # Sender configuration
-├── technical_documentation_sk.md # Technical documentation (Slovak)
-├── captures/                 # Directory for captured images
-├── REC/                      # Receiver component
+├── LICENSE                   # Licenčný súbor
+├── README.md                 # Dokumentácia projektu
+├── requirements.txt          # Spoločné závislosti
+├── security_sender.log       # Protokolový súbor odosielateľa
+├── sender_config.json        # Konfigurácia odosielateľa
+├── technical_documentation_sk.md # Technická dokumentácia (slovenčina)
+├── captures/                 # Adresár pre zachytené obrázky
+├── REC/                      # Komponent prijímača
 │   ├── __init__.py
-│   ├── alerts_screen.py      # Alerts management UI
-│   ├── app.py                # Main Kivy application
-│   ├── base_screen.py        # Base screen class
-│   ├── dashboard_screen.py   # Sensor monitoring UI
-│   ├── listeners.py          # Network listeners
-│   ├── login_screen.py       # PIN authentication UI
-│   ├── main_screen.py        # Main UI container
-│   ├── main.py               # Entry point
-│   ├── network.py            # Network utilities
-│   ├── notification_service.py # Notification and sound services
-│   ├── settings_manager.py   # Settings management
-│   ├── settings_screen.py    # Configuration UI
-│   ├── theme_helper.py       # UI theme utilities
-│   ├── web_app.py            # Web interface
-│   ├── assets/               # UI assets
-│   │   ├── alarm.wav         # Alarm sound
-│   │   └── security_logo.png # Application logo
-│   ├── config/               # Configuration files
-│   │   ├── settings.json     # Main settings
-│   │   └── settings.py       # Settings utilities
-│   └── web/                  # Web interface files
-│       ├── static/           # Static web assets
-│       │   └── css/          # CSS stylesheets
-│       └── templates/        # HTML templates
-│           ├── alerts.html   # Alerts page
-│           ├── base.html     # Base template
-│           ├── dashboard.html # Dashboard page
-│           ├── images.html   # Image gallery
-│           ├── login.html    # Login page
-│           ├── sensors.html  # Sensors status
-│           └── settings.html # Settings page
-└── SEND/                     # Sender component
+│   ├── alerts_screen.py      # UI správy upozornení
+│   ├── app.py                # Hlavná Kivy aplikácia
+│   ├── base_screen.py        # Základná trieda obrazovky
+│   ├── dashboard_screen.py   # UI monitorovania senzorov
+│   ├── listeners.py          # Sieťoví poslucháči
+│   ├── login_screen.py       # UI autentifikácie PIN
+│   ├── main_screen.py        # Hlavný UI kontajner
+│   ├── main.py               # Vstupný bod
+│   ├── network.py            # Sieťové nástroje
+│   ├── notification_service.py # Notifikačné a zvukové služby
+│   ├── settings_manager.py   # Správa nastavení
+│   ├── settings_screen.py    # UI konfigurácie
+│   ├── theme_helper.py       # Nástroje pre tému UI
+│   ├── web_app.py            # Webové rozhranie
+│   ├── assets/               # UI aktíva
+│   │   ├── alarm.wav         # Zvuk alarmu
+│   │   └── security_logo.png # Logo aplikácie
+│   ├── config/               # Konfiguračné súbory
+│   │   ├── alerts_log.py     # Manažér upozornení
+│   │   ├── alerts.log        # Log upozornení
+│   │   ├── settings.json     # Hlavné nastavenia
+│   │   └── settings.py       # Nástroje nastavení
+│   └── web/                  # Súbory webového rozhrania
+│       ├── static/           # Statické webové aktíva
+│       │   └── css/          # CSS štýly
+│       └── templates/        # HTML šablóny
+│           ├── alerts.html   # Stránka upozornení
+│           ├── base.html     # Základná šablóna
+│           ├── dashboard.html # Stránka dashboardu
+│           ├── images.html   # Galéria obrázkov
+│           ├── login.html    # Prihlasovacia stránka
+│           ├── sensors.html  # Stav senzorov
+│           └── settings.html # Stránka nastavení
+└── SEND/                     # Komponent odosielateľa
     ├── __init__.py
-    └── SEND.py               # Raspberry Pi script
+    └── SEND.py               # Skript pre Raspberry Pi
 ```
 
-## 📋 Technical Documentation
+## 📋 Technická dokumentácia
 
-Detailed technical documentation is available in [technical_documentation_sk.md](technical_documentation_sk.md) (in Slovak).
+Podrobná technická dokumentácia je k dispozícii v [technical_documentation_sk.md](technical_documentation_sk.md) (v slovenčine).
 
-## 🤝 Contributing
+## 🌍 Jazykové rozhranie
 
-Contributions are welcome! Please feel free to submit a pull request or open an issue for any suggestions or improvements.
+Celé používateľské rozhranie systému je lokalizované v slovenčine, vrátane:
+- Všetkých obrazoviek a tlačidiel
+- Chybových hlásení a upozornení
+- Webového rozhrania
+- Notifikácií a systémových správ
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Používateľské rozhranie je navrhnuté tak, aby bolo intuitívne a zrozumiteľné pre slovensky hovoriacich používateľov.
 
-## 📄 License
+## 🤝 Prispievanie
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Príspevky sú vítané! Neváhajte predložiť pull request alebo otvoriť problém pre akékoľvek návrhy alebo vylepšenia.
 
-## 📅 Last Updated
+1. Forkni repozitár
+2. Vytvor svoju vlastností (`git checkout -b feature/amazing-feature`)
+3. Commitni svoje zmeny (`git commit -m 'Add some amazing feature'`)
+4. Pushni do vetvičky (`git push origin feature/amazing-feature`)
+5. Otvor Pull Request
 
-April 13, 2025
+## 📄 Licencia
+
+Tento projekt je licencovaný pod licenciou MIT - podrobnosti nájdete v súbore LICENSE.
+
+## 📅 Posledná aktualizácia
+
+14. apríl 2025

@@ -23,6 +23,7 @@ Systém implementuje distribuovanú architektúru klient-server:
 | UDP | 8081 | Aktualizácie stavu senzorov, malé a časté správy |
 | TCP | 8080 | Prenos obrázkov, spoľahlivé doručovanie zachytených snímok |
 | UDP (Discovery) | 8082 | Objavovanie zariadení a sieťová konfigurácia |
+| Web (HTTP) | 8090 | Webové rozhranie pre vzdialený prístup z prehliadača |
 
 ## SEND Komponent
 
@@ -77,13 +78,54 @@ def _discovery_service(self):
 
 REC komponent poskytuje:
 
-1. Grafické používateľské rozhranie pre monitorovanie a konfiguráciu
+1. Grafické používateľské rozhranie pre monitorovanie a konfiguráciu 
 2. Zobrazovanie bezpečnostných udalostí v reálnom čase 
 3. Sieťových poslucháčov pre rôzne komunikačné kanály
 4. Trvalé ukladanie nastavení a stavu zariadenia
 5. Autentifikáciu prostredníctvom PIN kódu
 6. Prehľadnú prístrojovú dosku pre rýchle monitorovanie všetkých zariadení
 7. Webové rozhranie pre vzdialený prístup k monitorovaniu a konfigurácii
+
+### Štruktúra REC Komponentu
+
+REC komponent má nasledujúcu štruktúru súborov:
+
+```
+REC/
+├── __init__.py
+├── alerts_screen.py        # Obrazovka správy upozornení
+├── app.py                  # Hlavná Kivy aplikácia
+├── base_screen.py          # Základná trieda obrazovky
+├── dashboard_screen.py     # Obrazovka monitorovania zariadení
+├── listeners.py            # Sieťoví poslucháči
+├── login_screen.py         # Obrazovka PIN autentifikácie
+├── main_screen.py          # Hlavná navigačná obrazovka
+├── main.py                 # Vstupný bod aplikácie
+├── network.py              # Sieťové nástroje
+├── notification_service.py # Služba upozornení
+├── settings_manager.py     # Správa nastavení
+├── settings_screen.py      # Obrazovka nastavení
+├── theme_helper.py         # Témy používateľského rozhrania
+├── web_app.py              # Webové rozhranie
+├── assets/                 # Multimediálne súbory
+│   ├── alarm.wav           # Zvuk alarmu
+│   └── security_logo.png   # Logo aplikácie
+├── config/                 # Konfiguračné súbory
+│   ├── alerts_log.py       # Správa upozornení
+│   ├── alerts.log          # História upozornení
+│   ├── settings.json       # Nastavenia vo formáte JSON
+│   └── settings.py         # Nástroje nastavení
+└── web/                    # Súbory webového rozhrania
+    ├── static/             # Statické súbory (CSS, JavaScript)
+    └── templates/          # HTML šablóny
+        ├── alerts.html     # Stránka upozornení
+        ├── base.html       # Základná šablóna
+        ├── dashboard.html  # Prístrojová doska
+        ├── images.html     # Prehliadač obrázkov
+        ├── login.html      # Prihlasovacia stránka
+        ├── sensors.html    # Správa senzorov
+        └── settings.html   # Stránka nastavení
+```
 
 ### Podrobná Analýza Kódu
 
@@ -140,445 +182,311 @@ Kľúčové aspekty:
 - Prechody medzi obrazovkami riadia tok aplikácie
 - Aplikácia obsahuje 5 hlavných obrazoviek: prihlásenie, hlavnú obrazovku, nastavenia, upozornenia a prístrojovú dosku
 
-#### Systém Upozornení (`alerts_screen.py`)
+#### Obrazovka upozornení (`alerts_screen.py`)
 
-Systém upozornení demonštruje, ako sú bezpečnostné udalosti zobrazované používateľom:
+Systém upozornení umožňuje prezeranie, správu a interakciu s bezpečnostnými upozorneniami:
 
 ```python
-class AlertsScreen(Screen):
+class AlertsScreen(BaseScreen):
     def __init__(self, **kwargs):
         super(AlertsScreen, self).__init__(**kwargs)
         
-        # Vytvorenie rozloženia UI
-        layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        # Nastavenie titulku a tlačidla späť
+        self.set_title("Systémové upozornenia")
+        self.add_back_button('main')
         
-        # Nastavenie posúvateľného zoznamu upozornení
-        scroll_view = ScrollView(size_hint_y=0.7)
-        self.alerts_list = GridLayout(cols=1, spacing=5, size_hint_y=None)
-        self.alerts_list.bind(minimum_height=self.alerts_list.setter('height'))
-        scroll_view.add_widget(self.alerts_list)
+        # Zoznam upozornení s možnosťou prezerania obrázkov a označenia ako prečítané
+        # ...
         
-        # Pridanie upozornení do zoznamu
-        self.add_alert("Pohyb zaznamenaný - Predné dvere", "2025-03-24 10:15:22")
-        # Viac upozornení...
+    def refresh_alerts(self, *args):
+        """Načítanie a zobrazenie upozornení zo systému"""
+        # Načítanie upozornení z databázy
+        alerts = get_alerts()
         
-    def add_alert(self, message, timestamp):
-        """Pridanie upozornenia do zoznamu upozornení"""
-        alert_layout = BoxLayout(orientation='vertical', size_hint_y=None, height=80)
-        alert_layout.add_widget(Label(text=message, font_size=18, halign='left'))
-        alert_layout.add_widget(Label(text=timestamp, font_size=14, halign='left'))
-        self.alerts_list.add_widget(alert_layout)
-```
-
-Detaily implementácie:
-- Systém upozornení používa posúvateľné zobrazenie na spracovanie potenciálne mnohých upozornení
-- Každé upozornenie sa zobrazuje s obsahom správy a časovou pečiatkou
-- Metóda `add_alert()` vytvára štruktúrované zobrazenie pre každé upozornenie
-- UI je navrhnuté tak, aby bolo responzívne s flexibilným rozmerovaním
-- Navigácia je riešená prostredníctvom metódy `go_back()`
-
-#### Sieťoví Poslucháči (`listeners.py`)
-
-Poslucháči spracúvajú rôzne typy prichádzajúcej sieťovej komunikácie:
-
-##### DiscoveryListener
-
-```python
-class DiscoveryListener(threading.Thread):
-    def run(self):
-        self.running = True
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        # Zobrazenie upozornení v UI
+        # ...
         
-        # Počúvanie na vysielania objavovania
-        try:
-            self.socket.bind(('0.0.0.0', self.port))
-            while self.running:
-                data, address = self.socket.recvfrom(1024)
-                data = data.decode('utf-8')
-                
-                # Spracovanie správ objavovania
-                if data.startswith("SECURITY_DEVICE:ONLINE:"):
-                    parts = data.split(":")
-                    device_id = parts[2]
-                    device_name = parts[3]
-                    # Registrácia zariadenia...
-                    
-                # Odoslanie odpovede na požiadavky objavovania
-                if data.startswith("DISCOVER:"):
-                    # Odpoveď s informáciami o systéme...
-```
-
-Detaily implementácie:
-- Používa vláknenie na zabránenie blokovania hlavného vlákna UI
-- Implementuje UDP socketové programovanie s možnosťami vysielania
-- Parsuje protokolovo špecifické správy pre objavovanie zariadení
-- Umožňuje automatické objavovanie SEND zariadení v sieti
-- Elegantne zvláda sieťové chyby a vypnutie socketov
-
-##### UDPListener
-
-```python
-class UDPListener(threading.Thread):
-    def run(self):
-        # Inicializácia UDP socketu
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    def show_images_popup(self, image_paths, alert):
+        """Zobrazenie obrázkov v popup okne"""
+        # Zobrazenie zachytených obrázkov pre konkrétne upozornenie
+        # ...
         
-        try:
-            self.socket.bind(('0.0.0.0', self.port))
-            while self.running:
-                # Príjem aktualizácií senzorov
-                data, address = self.socket.recvfrom(1024)
-                data = data.decode('utf-8')
-                
-                # Spracovanie údajov zo senzora
-                if data.startswith("SENSOR:"):
-                    parts = data.split(":")
-                    device_id = parts[1]
-                    device_name = parts[2]
-                    sensor_type = parts[3]
-                    status = parts[4]
-                    
-                    # Aktualizácia informácií o zariadení a stave senzora
-                    # ...
-```
-
-Detaily implementácie:
-- Konfigurovaný pre ľahkú UDP komunikáciu pre aktualizácie senzorov
-- Zahŕňa parsovanie protokolu pre formát aktualizácie senzorov
-- Aktualizácie sú okamžite dostupné prostredníctvom systému spätného volania
-- Navrhnutý pre vysokofrekvenčné aktualizácie s nízkou latenciou
-
-##### TCPListener
-
-```python
-class TCPListener(threading.Thread):
-    def run(self):
-        # Inicializácia TCP server socketu
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        
-        try:
-            self.socket.bind(('0.0.0.0', self.port))
-            self.socket.listen(5)
-            
-            while self.running:
-                # Prijatie pripojení klientov
-                client, address = self.socket.accept()
-                
-                # Vytvorenie vlákna na obsluhu tohto klienta
-                client_thread = threading.Thread(
-                    target=self._handle_client,
-                    args=(client, address)
-                )
-                client_thread.daemon = True
-                client_thread.start()
-                
-    def _handle_client(self, client, address):
-        # Príjem hlavičky s typom obsahu a veľkosťou
-        # Príjem obrazových údajov alebo iného veľkého obsahu
-        # Spracovanie na základe typu obsahu
+    def mark_alert_read(self, instance):
+        """Označí upozornenie ako prečítané"""
+        # Aktualizácia stavu upozornenia
         # ...
 ```
 
-Detaily implementácie:
-- Používa spojovo orientovaný TCP pre spoľahlivý prenos údajov
-- Implementuje vláknový server na spracovanie viacerých klientskych pripojení
-- Navrhnutý pre väčšie dátové prenosy, ako sú prenosy obrázkov
-- Zahŕňa protokol na identifikáciu typu obsahu a určenie veľkosti
-- Podporuje prenos plných binárnych údajov
-
-#### Vzory Implementácie UI
-
-Systém používa konzistentné vzory UI naprieč obrazovkami:
-
-1. **Inicializácia Obrazovky**:
-```python
-def __init__(self, **kwargs):
-    super(ScreenClassName, self).__init__(**kwargs)
-    layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
-    # Pridanie widgetov do rozloženia
-    self.add_widget(layout)
-```
-
-2. **Hierarchia Widgetov**:
-```
-Screen
-└── BoxLayout (hlavné rozloženie)
-    ├── Hlavička (Label)
-    ├── Oblasť Obsahu (napr. ScrollView s GridLayout)
-    └── Ovládacie Tlačidlá (napr. tlačidlo Späť)
-```
-
-3. **Vzor Navigácie**:
-```python
-def go_back(self, instance):
-    self.manager.current = 'main'  # Návrat na predchádzajúcu obrazovku
-```
-
-4. **Vzor Zobrazenia Dát** (napr. z `AlertsScreen`):
-```python
-def add_alert(self, message, timestamp):
-    """Pridanie upozornenia do zoznamu upozornení"""
-    alert_layout = BoxLayout(orientation='vertical', size_hint_y=None, height=80)
-    alert_layout.add_widget(Label(text=message, font_size=18, halign='left'))
-    alert_layout.add_widget(Label(text=timestamp, font_size=14, halign='left'))
-    self.alerts_list.add_widget(alert_layout)
-```
-
-#### Implementácia Prístrojovej Dosky (`dashboard_screen.py`)
-
-Prístrojová doska používa komponentový prístup s opätovne použiteľnými widgetmi:
+Trieda `GracePeriodAlert` poskytuje intervenovať pri spustení alarmu:
 
 ```python
-class SensorCard(BoxLayout):
-    """Widget na zobrazenie jedného senzorového zariadenia"""
+class GracePeriodAlert(Popup):
+    """Vyskakovacie upozornenie zobrazujúce odpočet ochrannej doby pred spustením plného alarmu"""
     
-    def __init__(self, device_id, device_data, **kwargs):
-        super(SensorCard, self).__init__(**kwargs)
-        self.device_id = device_id
-        # Nastavenie rozloženia karty a obsahu
+    def __init__(self, alert_data, grace_seconds=30, **kwargs):
+        # Inicializácia popup okna s časovačom
+        # ...
         
-    def update_status(self, sensor_status):
-        """Aktualizácia zobrazenia stavu senzora"""
-        self.status_area.clear_widgets()
+    def on_number_press(self, instance):
+        """Spracovanie stlačenia číselného tlačidla"""
+        # Zadanie PIN kódu pre deaktiváciu alarmu
+        # ...
+    
+    def on_enter(self, instance):
+        """Overenie PIN kódu a vypnutie systému, ak je správny"""
+        # Validácia PIN kódu a deaktivácia systému
+        # ...
+```
+
+#### Prístrojová doska (`dashboard_screen.py`)
+
+Prístrojová doska poskytuje prehľad stavu všetkých senzorov v reálnom čase:
+
+```python
+class DashboardScreen(BaseScreen):
+    def __init__(self, **kwargs):
+        super(DashboardScreen, self).__init__(**kwargs)
         
-        for sensor_type, data in sensor_status.items():
-            # Pridanie vizuálnych indikátorov pre každý typ senzora
+        # Nastavenie titulku a tlačidla späť
+        self.set_title("Prehľad senzorov")
+        self.add_back_button('main')
+        
+        # Vytvorenie oblasti obsahu
+        content_area = self.create_content_area()
+        
+        # Vytvorenie kariet zariadení
+        self.device_container = GridLayout(cols=1, spacing=10, size_hint_y=None)
+        self.device_container.bind(minimum_height=self.device_container.setter('height'))
+        
+        # Pridanie posúvateľného zobrazenia pre zariadenia
+        scroll_view = ScrollView(size_hint_y=0.9)
+        scroll_view.add_widget(self.device_container)
+        content_area.add_widget(scroll_view)
+        
+        # Spodný panel s aktualizáciou a stavom systému
+        # ...
+        
+    def refresh_devices(self, *args):
+        """Aktualizácia zobrazovania zariadení a ich stavov"""
+        # Obnovenie stavu zariadení z nastavení
+        devices = self.get_devices_from_settings()
+        
+        # Aktualizácia alebo vytvorenie kariet zariadení
+        # ...
+        
+    def toggle_system_state(self, instance):
+        """Prepnutie stavu systému medzi aktívnym a neaktívnym"""
+        # Aktivácia/deaktivácia bezpečnostného systému
+        # ...
 ```
 
-Detaily implementácie:
-- Používa vlastné opätovne použiteľné widgety (`SensorCard`) pre každé zariadenie
-- Implementuje mechanizmus dynamickej aktualizácie pre zmeny stavu v reálnom čase
-- Používa vizuálne indikátory (farby) na zobrazenie rôznych stavov
-- Spravuje viacero typov senzorov na zariadení
-- Aktualizuje sa automaticky prostredníctvom načítavania alebo spätných volaní udalostí
+#### Prihlasovacia obrazovka (`login_screen.py`)
 
-#### Správa Nastavení (`config/settings.py`)
-
-Modul nastavení poskytuje centralizovaný konfiguračný systém:
+Prihlasovacia obrazovka implementuje bezpečnú autentifikáciu pomocou PIN kódu:
 
 ```python
-def load_settings():
-    """Načítanie nastavení zo súboru alebo vytvorenie predvolených nastavení"""
-    try:
-        with open(SETTINGS_FILE, 'r') as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return create_default_settings()
-
-def save_settings():
-    """Uloženie aktuálnych nastavení do súboru"""
-    try:
-        with open(SETTINGS_FILE, 'w') as f:
-            json.dump(settings, f, indent=4)
-        return True
-    except Exception:
-        return False
-
-def get_setting(key, default=None):
-    """Získanie nastavenia podľa kľúča s voliteľnou predvolenou hodnotou"""
-    keys = key.split('.')
-    current = settings
-    
-    for k in keys:
-        if k not in current:
-            return default
-        current = current[k]
-    
-    return current
-
-def update_setting(key, value):
-    """Aktualizácia nastavenia a uloženie do súboru"""
-    keys = key.split('.')
-    current = settings
-    
-    # Navigácia na príslušný vnorený slovník
-    for k in keys[:-1]:
-        if k not in current:
-            current[k] = {}
-        current = current[k]
-    
-    # Aktualizácia hodnoty
-    current[keys[-1]] = value
-    return save_settings()
-```
-
-Detaily implementácie:
-- Používa JSON pre ľudsky čitateľné ukladanie konfigurácie
-- Podporuje vnorené konfigurácie prostredníctvom bodkovej notácie (napr. `network.tcp_port`)
-- Poskytuje predvolené hodnoty pre chýbajúce konfigurácie
-- Elegantne zvláda výnimky pri vstupe/výstupe súborov
-- Udržiava vyrovnávaciu pamäť nastavení počas behu pre výkon
-
-### Autentifikačný Systém (`login_screen.py`)
-
-Autentifikačný systém založený na PIN kóde:
-
-```python
-def on_enter_pressed(self, instance):
-    """Spracovanie stlačenia tlačidla Enter"""
-    if validate_pin(self.pin_input):
-        self.manager.current = 'main'
+class LoginScreen(BaseScreen):
+    def __init__(self, **kwargs):
+        super(LoginScreen, self).__init__(**kwargs)
+        
+        # Nastavenie titulku
+        self.set_title("Prihlásenie do bezpečnostného systému")
+        
+        # Vytvorenie oblasti obsahu
+        content_area = self.create_content_area()
+        
+        # Vstupné pole pre PIN
         self.pin_input = ""
-        self.pin_display.text = ""
-        self.status_label.text = "Zadajte PIN pre prístup do systému"
-    else:
-        self.status_label.text = "Neplatný PIN. Skúste znova."
-        self.pin_input = ""
-        self.pin_display.text = ""
+        self.pin_display = TextInput(
+            multiline=False,
+            readonly=True,
+            halign="center",
+            font_size=24,
+            password=True,
+            size_hint_y=0.1
+        )
+        content_area.add_widget(self.pin_display)
         
-def on_button_press(self, instance):
-    """Spracovanie stlačení číselných tlačidiel"""
-    if len(self.pin_input) < 4:  # Obmedzenie PIN na 4 čísla
-        self.pin_input += instance.text
-        self.pin_display.text = "*" * len(self.pin_input)
+        # Klávesnica
+        keypad_layout = GridLayout(cols=3, spacing=[10, 10], size_hint_y=0.5)
+        
+        # Vytvorenie tlačidiel s číslami
+        for i in range(1, 10):  # Vytvorí tlačidlá 1 až 9
+            btn = Button(text=str(i), font_size=24)
+            btn.bind(on_release=self.on_button_press)
+            keypad_layout.add_widget(btn)
+            
+        # Pridanie tlačidiel vymazať, 0 a potvrdiť
+        # ...
+        
+    def on_enter_pressed(self, instance):
+        """Spracuje stlačenie tlačidla Potvrdiť"""
+        if validate_pin(self.pin_input):
+            print("DEBUG: PIN úspešne overený, prístup povolený")
+            self.status_label.text = "Prístup povolený"
+            self.manager.current = 'main'
+        else:
+            print(f"DEBUG: Zadaný neplatný PIN: {self.pin_input}")
+            self.status_label.text = "Neplatný PIN, skúste znova"
+            self.pin_input = ""
+            self.pin_display.text = ""
 ```
 
-Detaily implementácie:
-- Používa virtuálnu klávesnicu pre bezpečné zadávanie PIN kódu
-- Maskuje vstup PIN kódu hviezdičkami pre súkromie
-- Obmedzuje PIN na štandardné 4 číslice
-- Poskytuje okamžitú spätnú väzbu pri zlyhaniach autentifikácie
-- Validuje voči šifrovanému alebo hašovanému PIN kódu v nastaveniach
+#### Notifikačná služba (`notification_service.py`)
 
-### Webové Rozhranie (`web_app.py`)
-
-Systém poskytuje webové rozhranie pre vzdialený prístup:
+Notifikačná služba spravuje upozornenia, alarmy a ochranné doby:
 
 ```python
-def create_web_app():
-    """Vytvorenie Flask webovej aplikácie"""
-    app = Flask(__name__, 
-                template_folder=os.path.join(os.path.dirname(__file__), 'web/templates'),
-                static_folder=os.path.join(os.path.dirname(__file__), 'web/static'))
-    app.secret_key = 'security_system_secret_key'  # Pre správu relácie
+class NotificationService:
+    """Služba pre správu upozornení, zvukových alarmov a ochrannú dobu"""
     
-    @app.route('/')
-    def index():
-        """Hlavná trasa - presmerovanie na prihlásenie alebo prístrojovú dosku"""
-        if 'logged_in' in session and session['logged_in']:
-            return redirect(url_for('dashboard'))
-        return redirect(url_for('login'))
+    def __init__(self):
+        """Inicializácia služby notifikácií"""
+        from config.settings import get_setting
         
-    @app.route('/login', methods=['GET', 'POST'])
-    def login():
-        """Prihlasovacia stránka s odoslaním formulára"""
-        error = None
-        # Spracovanie prihlásenia...
+        # Načítanie nastavení
+        self.sound_manager = SoundManager()
+        self.settings = get_setting('notifications', {})
+        self.enabled = self.settings.get('enabled', True)
+        self.grace_period = get_setting('system.grace_period', 30)  # Sekúnd
         
-    @app.route('/dashboard')
-    @login_required
-    def dashboard():
-        """Prístrojová doska so stavom zariadení"""
-        devices = get_devices()
-        system_active = get_setting('system_active', False)
-        return render_template('dashboard.html', 
-                              devices=devices, 
-                              system_active=system_active)
-    
-    # Ďalšie trasy...
-    
-    return app
+        # Inicializácia stavu
+        self.active_grace_timer = None
+        self.alarm_active = False
+        
+    def start_grace_period(self, alert_data):
+        """Spustenie ochrannej doby pred aktiváciou alarmu"""
+        # Zobrazenie odpočtu a možnosti deaktivácie
+        # ...
+        
+    def cancel_grace_period(self):
+        """Zrušenie aktívnej ochrannej doby"""
+        # Zrušenie časovača a vyčistenie stavu
+        # ...
+        
+    def trigger_alarm(self, alert_data=None):
+        """Spustenie alarmu po uplynutí ochrannej doby"""
+        # Zvukový alarm a zaznamenanie upozornenia
+        # ...
+        
+    def stop_alarm(self):
+        """Zastavenie aktívneho alarmu"""
+        # Zastavenie zvukov a aktualizácia stavu
+        # ...
 ```
 
-Detaily implementácie:
-- Používa framework Flask pre ľahké vytváranie webových rozhraní
-- Implementuje správu relácií pre bezpečnú autentifikáciu
-- Obsahuje rozhrania API pre mobilné aplikácie alebo iné klientské aplikácie
-- Používa šablóny pre konzistentnú prezentáciu údajov
-- Implementuje zabezpečené trasy s dekorátorom `@login_required`
-- Používa Bootstrap pre responzívny dizajn vhodný pre mobily aj počítače
+#### Webové rozhranie (`web_app.py`)
 
-#### Konfigurácia Sieťového Prístupu
-
-Webový server je konfigurovaný tak, aby bol prístupný v rámci lokálnej siete (LAN):
+Webové rozhranie poskytuje vzdialený prístup k monitarovacím a konfiguračným funkciám:
 
 ```python
-class WebAppServer:
-    """Server webovej aplikácie pre prístup cez prehliadač"""
+class WebAppThread(threading.Thread):
+    """Vlákno pre spustenie webovej aplikácie"""
     
-    def __init__(self, host='0.0.0.0', port=8080):
-        """Inicializácia servera webovej aplikácie
-        
-        Argumenty:
-            host (str): Hostiteľská adresa, na ktorej server počúva
-            port (int): Port, na ktorom server počúva
-        """
+    def __init__(self, host='0.0.0.0', port=8090):
+        threading.Thread.__init__(self, daemon=True)
         self.host = host
         self.port = port
-        self.app = Flask(__name__, 
-                        static_folder='web/static',
-                        template_folder='web/templates')
-        # ...
-```
-
-Dôležité prvky sieťovej konfigurácie:
-- Server je viazaný na adresu `0.0.0.0`, čo umožňuje prístup zo všetkých sieťových rozhraní vrátane LAN
-- Štandardný port webového rozhrania je `8090` (konfigurovateľný v nastaveniach)
-- Prístup je možný z ľubovoľného zariadenia v rovnakej lokálnej sieti pomocou IP adresy servera a portu
-- Pre prístup stačí zadať do prehliadača: `http://IP_ADRESA_SERVERA:8090`
-- Všetky prístupy k webovému rozhraniu vyžadujú autentifikáciu pomocou PIN kódu
-- Pre bezpečný prístup z externej siete sa odporúča konfigurácia VPN alebo zabezpečeného reverzného proxy
-
-Ukážka spustenia webového servera v `app.py`:
-
-```python
-# Spustenie servera webovej aplikácie
-self.web_app = web_app
-self.web_app.start()
-print(f"DEBUG: Webová aplikácia spustená na porte {self.web_app.port}")
-```
-
-#### Rozhranie Mobilného API (`mobile_api.py`)
-
-Systém poskytuje API rozhranie pre mobilné aplikácie:
-
-```python
-def register_mobile_api(app):
-    """Registrácia trás API pre mobilnú aplikáciu na Flask aplikácii"""
-    
-    @app.route('/api/login', methods=['POST'])
-    def api_login():
-        """API koncový bod pre prihlásenie z mobilnej aplikácie"""
-        data = request.get_json()
-        if not data alebo 'pin' not in data:
-            return jsonify({'error': 'Chýbajúce prihlasovacie údaje'}), 400
+        self.app = Flask(__name__,
+                         static_folder='web/static',
+                         template_folder='web/templates')
+        self.setup_routes()
+        
+    def setup_routes(self):
+        """Nastavenie trás pre webovú aplikáciu"""
+        
+        @self.app.route('/')
+        def index():
+            """Hlavná stránka - presmerovanie na prihlásenie alebo prístrojovú dosku"""
+            # ...
             
-        pin = data['pin']
-        if validate_pin(pin):
-            token = generate_auth_token()
-            # Uloženie tokenu pre budúce požiadavky
-            return jsonify({'success': True, 'token': token})
-        
-        return jsonify({'error': 'Neplatné prihlasovacie údaje'}), 401
-        
-    @app.route('/api/devices', methods=['GET'])
-    @api_auth_required
-    def api_get_devices():
-        """API koncový bod pre získanie zoznamu zariadení"""
-        devices = get_devices()
-        return jsonify({'devices': devices})
-        
-    @app.route('/api/alerts', methods=['GET'])
-    @api_auth_required
-    def api_get_alerts():
-        """API koncový bod pre získanie zoznamu upozornení"""
-        start = request.args.get('start', 0, type=int)
-        limit = request.args.get('limit', 20, type=int)
-        alerts = get_alerts(start, limit)
-        return jsonify({'alerts': alerts})
-        
-    # Ďalšie API koncové body...
+        @self.app.route('/login', methods=['GET', 'POST'])
+        def login():
+            """Prihlasovacia stránka"""
+            # ...
+            
+        @self.app.route('/dashboard')
+        @login_required
+        def dashboard():
+            """Prístrojová doska so stavom zariadení"""
+            # ...
+            
+        @self.app.route('/alerts')
+        @login_required
+        def alerts():
+            """Zobrazenie histórie upozornení"""
+            # ...
+            
+        @self.app.route('/settings', methods=['GET', 'POST'])
+        @login_required
+        def settings():
+            """Konfigurácia systému"""
+            # ...
+            
+        @self.app.route('/toggle_system', methods=['POST'])
+        @login_required
+        def toggle_system():
+            """Aktivácia/deaktivácia systému"""
+            # ...
+            
+        @self.app.route('/cancel_alarm', methods=['POST'])
+        @login_required
+        def cancel_alarm():
+            """Zrušenie aktívneho alarmu"""
+            # ...
+    
+    def run(self):
+        """Spustenie webovej aplikácie"""
+        self.app.run(host=self.host, port=self.port, debug=False, use_reloader=False)
 ```
 
-Detaily implementácie:
-- Používa RESTful dizajn API pre štandardizovanú komunikáciu
-- Implementuje autentifikáciu založenú na tokenoch pre bezpečný mobilný prístup
-- Poskytuje filtrovanie a stránkovanie pre efektívne načítanie údajov
-- Vracia odpovede JSON pre ľahkú integráciu s mobilnými platformami
-- Obsahuje správu chýb a validáciu vstupu pre robustnosť
+### Služba zvukových upozornení
+
+V rámci notifikačnej služby je implementovaná podpora pre zvukové upozornenia:
+
+```python
+class SoundManager:
+    """Trieda pre správu zvukových efektov v systéme"""
+    
+    def __init__(self):
+        """Inicializácia správcu zvuku"""
+        from kivy.core.audio import SoundLoader
+        
+        self.sound = None
+        self.volume = 1.0
+        self.muted = False
+        
+        # Načítanie zvukového súboru
+        try:
+            sound_file = os.path.join(os.path.dirname(__file__), 'assets/alarm.wav')
+            self.sound = SoundLoader.load(sound_file)
+            if self.sound:
+                self.sound.volume = self.volume
+                print(f"DEBUG: Zvuk alarmu úspešne načítaný z {sound_file}")
+        except Exception as e:
+            print(f"CHYBA: Nemožno načítať zvuk alarmu: {e}")
+            
+    def play_alarm(self):
+        """Prehrá zvuk alarmu"""
+        if self.sound and not self.muted:
+            self.sound.loop = True  # Nastavenie opakovania zvuku
+            self.sound.play()
+            
+    def stop_alarm(self):
+        """Zastaví prehrávanie alarmu"""
+        if self.sound and self.sound.state == 'play':
+            self.sound.stop()
+```
+
+### Jazyková lokalizácia
+
+Celý systém je lokalizovaný v slovenčine, od komentárov v kóde až po používateľské rozhranie:
+
+1. **Systémové správy**: Všetky textové reťazce, upozornenia a informačné správy sú v slovenčine
+2. **UI elementy**: Všetky tlačidlá, popisky, nadpisy a menu sú v slovenčine
+3. **Komentáre v kóde**: Dokumentácia funkcií a tried v kóde používa slovenčinu
+4. **Webové rozhranie**: HTML šablóny používajú slovenčinu pre konzistentný používateľský zážitok
+5. **Chybové hlásenia**: Všetky chybové hlásenia a diagnostické správy sú v slovenčine
 
 ## Tok Dát
 
@@ -588,402 +496,47 @@ Keď sa aktivuje senzor, nastane nasledujúci tok:
 
 1. **Hardvérový Spúšťač**: Fyzický senzor zmení stav (napr. detekcia pohybu)
 2. **GPIO Udalosť**: Prerušenie GPIO na Raspberry Pi spúšťa callback v SEND komponente
-```python
-def _setup_gpio(self):
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(CONFIG["motion_pin"], GPIO.IN)
-    GPIO.add_event_detect(CONFIG["motion_pin"], GPIO.RISING, callback=self._on_motion_detected)
-```
-
 3. **Spracovateľ Udalostí**: Callback spracuje udalosť senzora
-```python
-def _on_motion_detected(self, channel):
-    logger.info("Pohyb detekovaný")
-    self._send_sensor_update("motion", "DETECTED")
-    self._capture_image("motion")
-```
-
-4. **Sieťový Prenos**: Aktualizácia stavu sa odosiela cez UDP
-```python
-def _send_sensor_update(self, sensor_type, status):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    message = f"SENSOR:{CONFIG['device_id']}:{CONFIG['device_name']}:{sensor_type}:{status}"
-    sock.sendto(message.encode(), (CONFIG["receiver_ip"], CONFIG["udp_port"]))
-```
-
+4. **Sieťový Prenos**: Aktualizácia stavu sa odosiela cez UDP do REC komponentu
 5. **REC Príjem**: UDP poslucháč prijme aktualizáciu stavu
-```python
-# V UDPListener
-data, address = self.socket.recvfrom(1024)
-data = data.decode('utf-8')
-# Spracovanie SENSOR: správy...
-```
-
 6. **Aktualizácia Databázy**: Stav uložený v nastaveniach a databáze
-```python
-# Uloženie aktualizovaného stavu senzora
-update_sensor_status(device_id, sensor_type, status)
-```
-
 7. **Aktualizácia UI**: Prístrojová doska a upozornenia aktualizované na zobrazenie nového stavu
-```python
-# V MainScreen alebo DashboardScreen
-def update_sensor_ui(self, data, address):
-    # Parsovanie údajov zo senzora
-    # Aktualizácia príslušných prvkov UI
-    # Pridanie do upozornení, ak je to potrebné
-```
-
 8. **Generovanie Upozornení**: Ak je systém aktivovaný, vytvorí sa upozornenie
-```python
-# Kontrola, či je systém aktivovaný
-if get_setting("system_active", False):
-    # Vytvorenie upozornenia
-    alerts_screen = self.manager.get_screen('alerts')
-    alerts_screen.add_alert(f"{sensor_type.capitalize()} senzor aktivovaný", timestamp)
-```
-
 9. **Zvukové Upozornenia**: Prehratie zvuku alarmu pre kritické upozornenia
-```python
-# V SoundManager
-def play_alarm():
-    """Prehrá zvuk alarmu"""
-    if self.sound:
-        self.sound.play()
-```
-
-10. **Notifikácie**: Odoslanie upozornení prostredníctvom notifikačnej služby
-```python
-# V NotificationService
-def send_notification(title, message):
-    """Odosiela notifikáciu prostredníctvom nakonfigurovaných kanálov"""
-    # Odoslanie e-mailu, SMS alebo push notifikácie
-```
+10. **E-mailové Notifikácie**: Odoslanie upozornení prostredníctvom e-mailu (ak je nakonfigurované)
 
 ### Tok Zachytávania Obrázkov
 
-1. **Spúšťacia Udalosť**: Udalosť senzora spúšťa zachytávanie obrázka
-```python
-def _capture_image(self, trigger_type):
-    # Kontrola, či uplynulo dostatok času od posledného zachytenia
-    current_time = time.time()
-    if current_time - self.last_capture_time < CONFIG["capture_interval"]:
-        return
-        
-    self.last_capture_time = current_time
-    
-    # Generovanie názvu súboru s časovou značkou
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{CONFIG['image_path']}/{trigger_type}_{timestamp}.jpg"
-    
-    # Zachytenie obrázka
-    with self.camera as camera:
-        camera.capture(filename)
-    
-    # Odoslanie obrázka príjemcovi
-    self._send_image(filename, trigger_type)
-```
+Pri bezpečnostných udalostiach systém zachytáva a spracúva obrázkové dôkazy:
 
-2. **TCP Prenos**: Obrázok odoslaný cez TCP pre spoľahlivosť
-```python
-def _send_image(self, image_path, trigger_type):
-    try:
-        # Čítanie údajov obrázka
-        with open(image_path, "rb") as img_file:
-            image_data = img_file.read()
-        
-        # Pripojenie k príjemcovi
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((CONFIG["receiver_ip"], CONFIG["tcp_port"]))
-        
-        # Odoslanie hlavičky s metadátami
-        header = f"IMAGE:{CONFIG['device_id']}:{trigger_type}:{len(image_data)}"
-        sock.send(header.encode() + b'\n')
-        
-        # Odoslanie údajov obrázka
-        sock.sendall(image_data)
-    except Exception as e:
-        logger.error(f"Nepodarilo sa odoslať obrázok: {e}")
-    finally:
-        sock.close()
-```
-
+1. **Spúšťacia Udalosť**: Udalosť senzora spúšťa zachytávanie obrázka z kamery
+2. **TCP Prenos**: Obrázok odoslaný cez TCP pre spoľahlivosť do REC komponentu
 3. **REC Príjem**: TCP poslucháč prijme a spracuje obrázok
-```python
-# V metóde _handle_client TCP poslucháča
-header = client.recv(1024).decode('utf-8').strip()
-if header.startswith("IMAGE:"):
-    parts = header.split(":")
-    device_id = parts[1]
-    trigger_type = parts[2]
-    size = int(parts[3])
-    
-    # Príjem údajov obrázka
-    data = b''
-    while len(data) < size:
-        packet = client.recv(4096)
-        if not packet:
-            break
-        data += packet
-    
-    # Uloženie obrázka a upozornenie UI
-    # ...
-```
-
-4. **Ukladanie Obrázkov**: Obrázok uložený v REC komponente
-5. **Aktualizácia Upozornení**: Príslušné upozornenia aktualizované s referenciou na obrázok
+4. **Ukladanie Obrázkov**: Obrázok uložený v lokálnom úložisku REC komponentu
+5. **Aktualizácia Upozornení**: Príslušné upozornenia prepojené s uloženými obrázkami
 6. **Webové Rozhranie**: Obrázok dostupný prostredníctvom webového rozhrania v galérii obrázkov
-
-### Tok Konfigurácie Systému
-
-1. **Obrazovka Nastavení**: Používateľ upraví nastavenia
-```python
-def save_settings(self, instance):
-    # Validácia vstupu
-    try:
-        tcp_port = int(self.tcp_port.text)
-        udp_port = int(self.udp_port.text)
-        discovery_port = int(self.discovery_port.text)
-        
-        # Aktualizácia nastavení
-        network_settings = {
-            "tcp_port": tcp_port,
-            "udp_port": udp_port,
-            "discovery_port": discovery_port
-        }
-        
-        update_setting("network", network_settings)
-        self.status_label.text = "Nastavenia uložené!"
-    except ValueError:
-        self.status_label.text = "Neplatné čísla portov"
-```
-
-2. **Aktualizácia Nastavení**: Zmeny zapísané do konfiguračného súboru
-3. **Aplikovanie Nastavení**: Nové nastavenia nadobúdajú účinnosť
-   - Pre niektoré nastavenia môže byť potrebný reštart komponentov
-   - Sieťoví poslucháči zvyčajne potrebujú reštart s novými nastaveniami portov
-
-4. **Vysielanie Zmien Nastavení**: Odoslanie aktualizácií do SEND zariadení
-```python
-def broadcast_settings_update(self):
-    """Odosiela aktualizácie nastavení do všetkých známych zariadení"""
-    devices = get_known_devices()
-    updated_settings = get_shared_settings()
-    
-    for device in devices:
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            message = f"SETTINGS_UPDATE:{json.dumps(updated_settings)}"
-            sock.sendto(message.encode(), (device['ip'], device['udp_port']))
-        except Exception as e:
-            logger.error(f"Nepodarilo sa odoslať aktualizáciu nastavení zariadeniu {device['id']}: {e}")
-        finally:
-            sock.close()
-```
-
-## Témy a Prispôsobenie Používateľského Rozhrania (`theme_helper.py`)
-
-Systém podporuje rôzne témy a personalizáciu používateľského rozhrania:
-
-```python
-class ThemeManager:
-    """Správca tém pre aplikáciu"""
-    
-    def __init__(self):
-        self.themes = {
-            'light': {
-                'background_color': [0.95, 0.95, 0.95, 1],
-                'text_color': [0.2, 0.2, 0.2, 1],
-                'primary_color': [0.2, 0.5, 0.8, 1],
-                'accent_color': [0.8, 0.2, 0.2, 1],
-                'card_color': [1, 1, 1, 1]
-            },
-            'dark': {
-                'background_color': [0.1, 0.1, 0.1, 1],
-                'text_color': [0.9, 0.9, 0.9, 1],
-                'primary_color': [0.3, 0.6, 0.9, 1],
-                'accent_color': [0.9, 0.3, 0.3, 1],
-                'card_color': [0.2, 0.2, 0.2, 1]
-            }
-        }
-        
-        # Načítanie aktuálnej témy z nastavení
-        self.current_theme = get_setting('ui.theme', 'light')
-        
-    def get_theme_color(self, color_name):
-        """Získa farbu z aktuálnej témy"""
-        theme = self.themes.get(self.current_theme, self.themes['light'])
-        return theme.get(color_name, [0, 0, 0, 1])
-        
-    def apply_theme_to_widget(self, widget):
-        """Aplikuje aktuálnu tému na widget"""
-        if hasattr(widget, 'background_color'):
-            widget.background_color = self.get_theme_color('background_color')
-            
-        if hasattr(widget, 'color'):
-            widget.color = self.get_theme_color('text_color')
-            
-        # Rekurzívne aplikovanie témy na podwidgety
-        if hasattr(widget, 'children'):
-            for child in widget.children:
-                self.apply_theme_to_widget(child)
-                
-    def switch_theme(self, theme_name):
-        """Prepne na inú tému a uloží nastavenie"""
-        if theme_name in self.themes:
-            self.current_theme = theme_name
-            update_setting('ui.theme', theme_name)
-            return True
-        return False
-```
 
 ## Body Rozšírenia
 
-Systém je navrhnutý na rozšíriteľnosť:
+Systém je navrhnutý s ohľadom na budúce rozšírenia:
 
-1. **Dodatočné Senzory**: SEND komponent môže byť rozšírený o nové typy senzorov
-2. **Vylepšená Autentifikácia**: Prihlasovacie systém by mohol byť rozšírený o viacfaktorovú autentifikáciu
-3. **Cloudová Integrácia**: Systém by mohol byť rozšírený o zálohovanie udalostí do cloudového úložiska
-4. **Mobilná Aplikácia**: Sprievodná mobilná aplikácia by mohla byť vyvinutá s použitím rovnakých protokolov
-5. **Integrácie s Tretími Stranami**: Systém by mohol byť rozšírený o integrácie s HomeKit, Google Home alebo Alexa
-6. **Analytika a Reportovanie**: Implementácia modelov strojového učenia pre odhalenie vzorov a identifikáciu falošných poplachov
-
-## Správa Zvukov (`sound_manager.py`)
-
-Systém zahŕňa správu zvukových oznámení a alarmov:
-
-```python
-class SoundManager:
-    """Trieda pre správu zvukových efektov a alarmov v systéme"""
-    
-    def __init__(self):
-        """Inicializácia správcu zvuku"""
-        self.sound = None
-        self.muted = get_setting('audio.muted', False)
-        self.volume = get_setting('audio.volume', 1.0)
-        self._load_sounds()
-        
-    def _load_sounds(self):
-        """Načítanie zvukových efektov"""
-        try:
-            sound_file = os.path.join(os.path.dirname(__file__), 'assets/alarm.wav')
-            self.sound = SoundLoader.load(sound_file)
-            if self.sound:
-                self.sound.volume = 0 if self.muted else self.volume
-        except Exception as e:
-            print(f"Chyba pri načítavaní zvuku: {e}")
-            
-    def play_alarm(self):
-        """Prehrá zvuk alarmu"""
-        if self.sound a not self.muted:
-            self.sound.play()
-            
-    def stop_alarm(self):
-        """Zastaví prehrávanie alarmu"""
-        if self.sound:
-            self.sound.stop()
-            
-    def set_volume(self, volume):
-        """Nastaví hlasitosť v rozsahu 0.0 - 1.0"""
-        self.volume = max(0.0, min(1.0, volume))
-        update_setting('audio.volume', self.volume)
-        if self.sound a not self.muted:
-            self.sound.volume = self.volume
-            
-    def toggle_mute(self):
-        """Prepne stav stlmenia zvuku"""
-        self.muted = not self.muted
-        update_setting('audio.muted', self.muted)
-        if self.sound:
-            self.sound.volume = 0 if self.muted else self.volume
-```
-
-## Služba Notifikácií (`notification_service.py`)
-
-Systém obsahuje službu pre odosielanie notifikácií cez rôzne kanály:
-
-```python
-class NotificationService:
-    """Služba pre odosielanie notifikácií na rôzne kanály"""
-    
-    def __init__(self):
-        """Inicializácia služby notifikácií"""
-        self.settings = get_setting('notifications', {})
-        self.enabled = self.settings.get('enabled', True)
-        
-    def send_notification(self, title, message, importance='normal'):
-        """Odosiela notifikáciu cez všetky nakonfigurované kanály"""
-        if not self.enabled:
-            return False
-            
-        success = False
-        
-        # Kontrola úrovne dôležitosti a filtrovanie notifikácií
-        min_importance = self.settings.get('min_importance', 'normal')
-        if not self._should_send(importance, min_importance):
-            return False
-            
-        # Odoslanie e-mailových notifikácií
-        if self.settings.get('email', {}).get('enabled', False):
-            email_success = self._send_email_notification(title, message)
-            success = success alebo email_success
-            
-        # Odoslanie SMS notifikácií
-        if self.settings.get('sms', {}).get('enabled', False):
-            sms_success = self._send_sms_notification(title, message)
-            success = success alebo sms_success
-            
-        # Odoslanie push notifikácií
-        if self.settings.get('push', {}).get('enabled', False):
-            push_success = self._send_push_notification(title, message)
-            success = success alebo push_success
-            
-        return success
-        
-    def _send_email_notification(self, title, message):
-        """Odosiela e-mailovú notifikáciu"""
-        # Implementácia odosielania e-mailu...
-        
-    def _send_sms_notification(self, title, message):
-        """Odosiela SMS notifikáciu"""
-        # Implementácia odosielania SMS...
-        
-    def _send_push_notification(self, title, message):
-        """Odosiela push notifikáciu na mobilné zariadenia"""
-        # Implementácia odosielania push notifikácie...
-        
-    def _should_send(self, importance, min_importance):
-        """Rozhodne, či by sa mala odoslať notifikácia na základe dôležitosti"""
-        importance_levels = {
-            'low': 0,
-            'normal': 1,
-            'high': 2,
-            'critical': 3
-        }
-        
-        current_level = importance_levels.get(importance, 1)
-        min_level = importance_levels.get(min_importance, 1)
-        
-        return current_level >= min_level
-```
+1. **Dodatočné Senzory**: Podpora pre nové typy senzorov a detektorov
+2. **Vylepšená Autentifikácia**: Rozšírenie o viacfaktorovú autentifikáciu
+3. **Cloudová Integrácia**: Zálohovanie udalostí a obrázkov do cloudového úložiska
+4. **Mobilná Aplikácia**: Vývoj natívnej mobilnej aplikácie pre Android a iOS
+5. **Integrácie s Tretími Stranami**: Podpora pre HomeKit, Google Home alebo Alexa
+6. **Analytika a Štatistiky**: Pokročilé nástroje pre analýzu bezpečnostných udalostí
+7. **Rozpoznávanie Objektov**: Implementácia strojového učenia pre rozpoznávanie objektov na zachytených obrázkoch
 
 ## Záver
 
-Tento bezpečnostný systém poskytuje flexibilnú, rozšíriteľnú platformu pre domáce monitorovanie s viacerými senzormi a kamerami. Distribuovaná architektúra umožňuje umiestniť senzory po celom objekte pri zachovaní centralizovaného monitorovania a riadenia.
+Tento bezpečnostný systém poskytuje komplexné riešenie pre monitorovanie domácnosti a detekciu neoprávneného vniknutia. Vďaka kompletnej lokalizácii v slovenčine je systém priateľský a intuitívny pre slovensky hovoriacich používateľov. Modulárna architektúra umožňuje flexibilnú konfiguráciu aj rozšíriteľnosť pre budúce vylepšenia.
 
-Systém bol navrhnutý s dôrazom na:
-- **Modularitu**: Jasne definované komponenty s jednotlivými zodpovednosťami
-- **Rozšíriteľnosť**: Architektúra umožňujúca pridanie nových funkčností a integrácie
-- **Bezpečnosť**: Implementácia autentifikácie a zabezpečenia údajov
-- **Používateľskú skúsenosť**: Intuitívne používateľské rozhranie s responzívnym dizajnom
-- **Spoľahlivosť**: Robustné spracovanie chýb a mechanizmy obnovy
+Hlavné silné stránky systému:
+- **Flexibilná inštalácia**: Podpora mnohých typov senzorov a rôznych usporiadaní
+- **Jednoduché používanie**: Intuitívne používateľské rozhranie v slovenčine
+- **Viacero rozhraní**: Desktopové a webové rozhranie pre rôzne spôsoby prístupu
+- **Spoľahlivosť**: Robustné spracovanie chýb a zotavenie z výnimiek
+- **Bezpečnosť**: Viacúrovňová autentifikácia a ochrana údajov
 
-Kód demonštruje niekoľko dôležitých princípov návrhu softvéru:
-- Oddelenie zodpovedností s jasnými zodpovednosťami komponentov
-- Architektúra riadená udalosťami pre responzívne používateľské rozhranie a integráciu hardvéru
-- Súbežnosť založená na vláknách pre sieťové operácie
-- Komponentový návrh používateľského rozhrania s opätovne použiteľnými prvkami
-- Perzistentná konfigurácia s predvolenými hodnotami a validáciou
-- Mechanizmy spracovávania chýb a obnovy pre robustnosť
-
-S týmito prvkami systém poskytuje komplexné a flexibilné riešenie pre domácu bezpečnosť s možnosťami ďalšieho vývoja a customizácie.
+Systém bol navrhnutý s dôrazom na použiteľnosť, spoľahlivosť a rozšíriteľnosť, a poskytuje solídny základ pre domáci bezpečnostný monitoring s možnosťami ďalšieho vývoja a prispôsobenia.

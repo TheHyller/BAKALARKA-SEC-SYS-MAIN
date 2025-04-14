@@ -56,7 +56,7 @@ class SensorCard(BoxLayout):
             last_seen_text = "Unknown"
             
         self.last_seen_label = Label(
-            text=f"Last seen: {last_seen_text}",
+            text=f"Naposledy videné: {last_seen_text}",
             font_size=12,
             size_hint_x=0.3
         )
@@ -92,7 +92,7 @@ class SensorCard(BoxLayout):
             keep_ratio=True
         )
         view_button = Button(
-            text="View Images",
+            text="Zobraziť obrázky",
             size_hint=(1, 0.2),
             font_size=12
         )
@@ -108,13 +108,13 @@ class SensorCard(BoxLayout):
         buttons = BoxLayout(orientation='horizontal', size_hint_y=0.2, spacing=5)
         
         refresh_btn = Button(
-            text="Refresh",
+            text="Obnoviť",
             size_hint_x=0.5
         )
         refresh_btn.bind(on_release=lambda btn: self.request_refresh())
         
         remove_btn = Button(
-            text="Remove Device",
+            text="Odstrániť zariadenie",
             size_hint_x=0.5
         )
         remove_btn.bind(on_release=lambda btn: self.confirm_remove_device())
@@ -141,7 +141,7 @@ class SensorCard(BoxLayout):
         self.status_area.clear_widgets()
         
         if not sensor_status:
-            self.status_area.add_widget(Label(text="No sensor data available"))
+            self.status_area.add_widget(Label(text="Nie sú dostupné žiadne údaje senzora"))
             return
         
         # Načítanie najnovšieho obrázka
@@ -155,9 +155,9 @@ class SensorCard(BoxLayout):
             ))
             
             # Check if data is a dictionary or a string value
-            status = "Unknown"
+            status = "Neznámy"
             if isinstance(data, dict):
-                status = data.get('status', 'Unknown')
+                status = data.get('status', 'Neznámy')
             else:
                 # If data is a string, use it directly as the status
                 status = str(data)
@@ -241,7 +241,7 @@ class SensorCard(BoxLayout):
             # Kontrola, či adresár existuje
             if not os.path.exists(storage_path):
                 os.makedirs(storage_path, exist_ok=True)
-                self._show_error_popup("No images found for this device")
+                self._show_error_popup("Pre toto zariadenie neboli nájdené žiadne obrázky")
                 return
                 
             # Hľadanie obrázkov pre toto zariadenie
@@ -260,7 +260,7 @@ class SensorCard(BoxLayout):
             matching_images.sort(key=lambda x: x[1], reverse=True)
             
             if not matching_images:
-                self._show_error_popup("No images found for this device")
+                self._show_error_popup("Pre toto zariadenie neboli nájdené žiadne obrázky")
                 return
                 
             # Zobrazenie obrázkov v carousel popup
@@ -268,7 +268,7 @@ class SensorCard(BoxLayout):
             
         except Exception as e:
             print(f"ERROR: Zlyhalo zobrazenie obrázkov: {e}")
-            self._show_error_popup(f"Error loading images: {str(e)}")
+            self._show_error_popup(f"Chyba pri načítaní obrázkov: {str(e)}")
             
     def _show_images_carousel(self, image_paths):
         """Zobrazenie obrázkov v karuseli (slideshow)"""
@@ -302,14 +302,14 @@ class SensorCard(BoxLayout):
         
         # Tlačidlo na zatvorenie
         close_button = Button(
-            text="Close",
+            text="Zatvoriť",
             size_hint_y=0.1
         )
         content.add_widget(close_button)
         
         # Vytvorenie a zobrazenie popup
         popup = Popup(
-            title=f"Images from {self.device_name.text}",
+            title=f"Obrázky z {self.device_name.text}",
             content=content,
             size_hint=(0.9, 0.9)
         )
@@ -322,11 +322,11 @@ class SensorCard(BoxLayout):
         content = BoxLayout(orientation='vertical', padding=10)
         content.add_widget(Label(text=message))
         
-        button = Button(text="Close", size_hint_y=0.3)
+        button = Button(text="Zatvoriť", size_hint_y=0.3)
         content.add_widget(button)
         
         popup = Popup(
-            title="Error",
+            title="Chyba",
             content=content,
             size_hint=(0.7, 0.4)
         )
@@ -339,21 +339,21 @@ class SensorCard(BoxLayout):
         content = BoxLayout(orientation='vertical', padding=10, spacing=10)
         
         content.add_widget(Label(
-            text=f"Are you sure you want to remove device {self.device_name.text}?",
+            text=f"Ste si istý, že chcete odstrániť zariadenie {self.device_name.text}?",
             halign='center'
         ))
         
         buttons = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=0.4)
         
-        cancel_btn = Button(text="Cancel")
-        remove_btn = Button(text="Remove")
+        cancel_btn = Button(text="Zrušiť")
+        remove_btn = Button(text="Odstrániť")
         
         buttons.add_widget(cancel_btn)
         buttons.add_widget(remove_btn)
         content.add_widget(buttons)
         
         popup = Popup(
-            title="Confirm Device Removal",
+            title="Potvrdiť odstránenie zariadenia",
             content=content,
             size_hint=(0.7, 0.4),
             auto_dismiss=True
@@ -386,11 +386,11 @@ class DashboardScreen(BaseScreen):
         super(DashboardScreen, self).__init__(**kwargs)
         
         # Nastavenie titulku
-        self.set_title("Security System Dashboard")
+        self.set_title("Dashboard bezpečnostného systému")
         
         # Pridanie tlačidla späť do hlavičky
         back_button = Button(
-            text="Back",
+            text="Späť",
             size_hint_x=0.15
         )
         back_button.bind(on_release=self.go_back)
@@ -401,7 +401,7 @@ class DashboardScreen(BaseScreen):
         
         # Vytvorenie tlačidla na obnovenie v hornej časti obsahu
         refresh_button = Button(
-            text="Refresh Dashboard",
+            text="Obnoviť dashboard",
             size_hint_y=0.05
         )
         refresh_button.bind(on_release=self.refresh_dashboard)
@@ -443,7 +443,7 @@ class DashboardScreen(BaseScreen):
             self.sensors_layout.clear_widgets()
             self.sensor_cards = {}
             no_sensors_label = Label(
-                text="No sensor devices detected\nPlease make sure your sensors are powered on and connected to the network",
+                text="Neboli zistené žiadne senzory\nUistite sa, že senzory sú zapnuté a pripojené k sieti",
                 halign='center',
                 valign='middle',
                 size_hint_y=None,

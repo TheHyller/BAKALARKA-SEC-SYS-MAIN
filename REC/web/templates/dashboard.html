@@ -165,17 +165,18 @@
         
         // Set up the disable system button in the grace period modal
         document.getElementById('disable-system-btn').addEventListener('click', function() {
-            // Disable the system
-            fetch('/api/toggle', {
+            // First call our new endpoint to clear grace period
+            fetch('/api/clear_grace_period', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ active: false })
+                }
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success && !data.system_active) {
+                if (data.success) {
+                    console.log('Successfully cleared grace period and alerts');
+                    
                     // Update UI
                     const statusText = document.getElementById('system-status-text');
                     const statusBadge = document.querySelector('#status-card .badge');

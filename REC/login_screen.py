@@ -12,7 +12,7 @@ class LoginScreen(BaseScreen):
         super(LoginScreen, self).__init__(**kwargs)
         
         # Nastavenie titulku
-        self.set_title("Security System Login")
+        self.set_title("Prihlásenie do bezpečnostného systému")
         
         # Vytvorenie oblasti obsahu
         content_area = self.create_content_area()
@@ -39,7 +39,7 @@ class LoginScreen(BaseScreen):
             keypad_layout.add_widget(btn)
             
         # Pridanie tlačidiel vymazať, 0 a enter
-        btn_clear = Button(text="Clear", font_size=20)
+        btn_clear = Button(text="Vymazať", font_size=20)
         btn_clear.bind(on_release=self.on_clear)
         keypad_layout.add_widget(btn_clear)
         
@@ -47,7 +47,7 @@ class LoginScreen(BaseScreen):
         btn_0.bind(on_release=self.on_button_press)
         keypad_layout.add_widget(btn_0)
         
-        btn_enter = Button(text="Enter", font_size=20)
+        btn_enter = Button(text="Potvrdiť", font_size=20)
         btn_enter.bind(on_release=self.on_enter_pressed)
         keypad_layout.add_widget(btn_enter)
         
@@ -55,7 +55,7 @@ class LoginScreen(BaseScreen):
         
         # Stavová správa
         self.status_label = Label(
-            text="Enter PIN to access system",
+            text="Zadajte PIN pre prístup do systému",
             font_size=18,
             size_hint_y=0.2
         )
@@ -66,11 +66,11 @@ class LoginScreen(BaseScreen):
         """Spracuje stlačenie tlačidla Enter"""
         if validate_pin(self.pin_input):
             print("DEBUG: PIN úspešne overený, prístup povolený")
-            self.status_label.text = "Access granted"
+            self.status_label.text = "Prístup povolený"
             self.manager.current = 'main'
         else:
             print(f"DEBUG: Zadaný neplatný PIN: {self.pin_input}")
-            self.status_label.text = "Invalid PIN, please try again"
+            self.status_label.text = "Neplatný PIN, skúste znova"
             self.pin_input = ""
             self.pin_display.text = ""
         
@@ -89,4 +89,4 @@ class LoginScreen(BaseScreen):
         # Pri návrate na túto obrazovku vynuluj vstup PIN
         self.pin_input = ""
         self.pin_display.text = ""
-        self.status_label.text = "Enter PIN to access system"
+        self.status_label.text = "Zadajte PIN pre prístup do systému"

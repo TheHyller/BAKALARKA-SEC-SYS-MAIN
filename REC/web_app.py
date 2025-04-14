@@ -545,9 +545,9 @@ class WebAppServer:
 
         @self.app.route('/api/grace_period_status', methods=['GET'])
         def api_grace_period_status():
-            """API endpoint to check the status of any active grace period"""
+            """API koncový bod na kontrolu stavu aktívnej ochrannej doby"""
             if not api_authenticate():
-                return jsonify({'error': 'Unauthorized'}), 401
+                return jsonify({'error': 'Neautorizovaný'}), 401
                 
             # Import notification service here to avoid circular imports
             from notification_service import notification_service
@@ -567,9 +567,30 @@ class WebAppServer:
                 return jsonify({
                     'active': False
                 })
+                
+        @self.app.route('/api/clear_grace_period', methods=['POST'])
+        def api_clear_grace_period():
+            """API koncový bod na vymazanie aktívnej ochrannej doby a deaktiváciu systému"""
+            if not api_authenticate():
+                return jsonify({'error': 'Neautorizovaný'}), 401
+                
+            # Import notification service here to avoid circular imports
+            from notification_service import notification_service
+            from config.settings import toggle_system_state
+            
+            # Disable the system
+            toggle_system_state(False)
+            
+            # Clear the grace period and stop any alarms
+            notification_service.clear_grace_period()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Systém deaktivovaný a upozornenie vymazané'
+            })
     
     def cancel_all_alerts(self, instance):
-        """Cancel all active alerts and disable system"""
+        """Zrušiť všetky aktívne upozornenia a deaktivovať systém"""
         from notification_service import notification_service
         from config.settings import toggle_system_state
         

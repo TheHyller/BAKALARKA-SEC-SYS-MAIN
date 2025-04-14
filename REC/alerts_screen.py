@@ -10,19 +10,20 @@ from kivy.uix.textinput import TextInput
 from kivy.clock import Clock
 from datetime import datetime
 import os
-from config.settings import get_alerts, mark_alert_as_read, get_setting
+from config.alerts_log import get_alerts, mark_alert_as_read, mark_all_alerts_as_read
+from config.settings import get_setting
 
 class AlertsScreen(BaseScreen):
     def __init__(self, **kwargs):
         super(AlertsScreen, self).__init__(**kwargs)
         
         # Nastavenie titulku a tlačidla späť
-        self.set_title("System Alerts")
+        self.set_title("Systémové upozornenia")
         self.add_back_button('main')
         
         # Pridanie tlačidla na obnovenie do hlavičky
         refresh_button = Button(
-            text="Refresh",
+            text="Obnoviť",
             size_hint_x=0.3
         )
         refresh_button.bind(on_release=self.refresh_alerts)
@@ -40,7 +41,7 @@ class AlertsScreen(BaseScreen):
         
         # Štatistiky upozornení
         self.stats_label = Label(
-            text="Total alerts: 0 | Unread: 0",
+            text="Celkovo upozornení: 0 | Neprečítané: 0",
             font_size=16,
             size_hint_y=0.1
         )
@@ -51,7 +52,7 @@ class AlertsScreen(BaseScreen):
         
         # Tlačidlo označiť všetko ako prečítané
         clear_button = Button(
-            text="Mark All Read"
+            text="Označiť všetko ako prečítané"
         )
         clear_button.bind(on_release=self.mark_all_read)
         footer.add_widget(clear_button)
@@ -72,19 +73,19 @@ class AlertsScreen(BaseScreen):
         
         if not alerts:
             self.alerts_list.add_widget(Label(
-                text="No alerts to display",
+                text="Žiadne upozornenia na zobrazenie",
                 font_size=18,
                 size_hint_y=None,
                 height=80
             ))
-            self.stats_label.text = "Total alerts: 0 | Unread: 0"
+            self.stats_label.text = "Celkovo upozornení: 0 | Neprečítané: 0"
             return
         
         # Počítanie neprečítaných upozornení
         unread_count = sum(1 for a in alerts if not a.get('read', False))
         
         # Aktualizácia štatistiky
-        self.stats_label.text = f"Total alerts: {len(alerts)} | Unread: {unread_count}"
+        self.stats_label.text = f"Celkovo upozornení: {len(alerts)} | Neprečítané: {unread_count}"
         
         # Pridanie upozornení do zoznamu
         for i, alert in enumerate(alerts):
@@ -93,9 +94,9 @@ class AlertsScreen(BaseScreen):
     def add_alert_to_ui(self, index, alert):
         """Pridanie upozornenia do používateľského rozhrania"""
         # Extrahovanie dát
-        device_name = alert.get('device_name', 'Unknown Device')
-        sensor_type = alert.get('sensor_type', 'unknown').capitalize()
-        status = alert.get('status', 'UNKNOWN')
+        device_name = alert.get('device_name', 'Neznáme zariadenie')
+        sensor_type = alert.get('sensor_type', 'neznámy').capitalize()
+        status = alert.get('status', 'NEZNÁMY')
         timestamp = alert.get('timestamp', 0)
         is_read = alert.get('read', False)
         
@@ -124,7 +125,7 @@ class AlertsScreen(BaseScreen):
         # Horný riadok: Názov zariadenia a časová pečiatka
         header_layout = BoxLayout(orientation='horizontal', size_hint_y=0.3)
         device_label = Label(
-            text=f"Device: {device_name}",
+            text=f"Zariadenie: {device_name}",
             font_size=16,
             bold=True,
             halign='left',
@@ -145,7 +146,7 @@ class AlertsScreen(BaseScreen):
         alert_box.add_widget(header_layout)
         
         # Hlavná správa
-        message = f"{sensor_type} sensor {status}"
+        message = f"{sensor_type} senzor {status}"
         message_label = Label(
             text=message,
             font_size=18,
@@ -159,14 +160,14 @@ class AlertsScreen(BaseScreen):
         buttons_layout = BoxLayout(orientation='horizontal', size_hint_y=0.3, spacing=5)
         
         view_images_btn = Button(
-            text="View Images",
+            text="Zobraziť obrázky",
             size_hint_x=0.5
         )
         view_images_btn.index = index  # Uloženie indexu pre callback
         view_images_btn.bind(on_release=self.view_alert_images)
         
         mark_read_btn = Button(
-            text="Mark as Read" if not is_read else "Already Read",
+            text="Označiť ako prečítané" if not is_read else "Už prečítané",
             size_hint_x=0.5,
             disabled=is_read
         )
@@ -189,9 +190,7 @@ class AlertsScreen(BaseScreen):
                 
     def mark_all_read(self, instance):
         """Označí všetky upozornenia ako prečítané"""
-        alerts = get_alerts()
-        for i in range(len(alerts)):
-            mark_alert_as_read(i)
+        mark_all_alerts_as_read()
         self.refresh_alerts()
         
     def view_alert_images(self, instance):
@@ -207,14 +206,14 @@ class AlertsScreen(BaseScreen):
         timestamp = alert.get('timestamp')
         
         if not all([device_id, sensor_type, timestamp]):
-            self.show_error_popup("Cannot display images: Missing alert details")
+            self.show_error_popup("Nemožno zobraziť obrázky: Chýbajú detaily upozornenia")
             return
             
         # Konvertovanie časovej pečiatky na formát, ktorý by sa mohol zhodovať s názvami súborov
         if isinstance(timestamp, (int, float)):
             timestamp_date = datetime.fromtimestamp(timestamp).strftime("%Y%m%d")
         else:
-            self.show_error_popup("Cannot display images: Invalid timestamp")
+            self.show_error_popup("Nemožno zobraziť obrázky: Neplatná časová pečiatka")
             return
             
         # Cesta k adresáru s obrázkami
@@ -228,7 +227,7 @@ class AlertsScreen(BaseScreen):
         # Kontrola, či adresár existuje
         if not os.path.exists(storage_path):
             os.makedirs(storage_path, exist_ok=True)
-            self.show_error_popup("No images found: Image directory doesn't exist")
+            self.show_error_popup("Neboli nájdené žiadne obrázky: Adresár obrázkov neexistuje")
             return
             
         # Hľadanie obrázkov zodpovedajúcich tomuto upozorneniu
@@ -243,7 +242,7 @@ class AlertsScreen(BaseScreen):
                 matching_images.append(os.path.join(storage_path, filename))
         
         if not matching_images:
-            self.show_error_popup("No images found for this alert")
+            self.show_error_popup("Pre toto upozornenie neboli nájdené žiadne obrázky")
             return
             
         # Zobrazenie obrázkov v popup okne
@@ -252,9 +251,9 @@ class AlertsScreen(BaseScreen):
     def show_images_popup(self, image_paths, alert):
         """Zobrazenie obrázkov v popup okne"""
         # Formátovanie informácií o upozornení
-        device_name = alert.get('device_name', 'Unknown Device')
-        sensor_type = alert.get('sensor_type', 'unknown').capitalize()
-        status = alert.get('status', 'UNKNOWN')
+        device_name = alert.get('device_name', 'Neznáme zariadenie')
+        sensor_type = alert.get('sensor_type', 'neznámy').capitalize()
+        status = alert.get('status', 'NEZNÁMY')
         timestamp = alert.get('timestamp', 0)
         
         if isinstance(timestamp, (int, float)):
@@ -263,14 +262,14 @@ class AlertsScreen(BaseScreen):
             time_str = str(timestamp)
             
         # Vytvorenie titulku
-        title = f"{sensor_type} alert from {device_name} at {time_str}"
+        title = f"{sensor_type} upozornenie z {device_name} o {time_str}"
         
         # Vytvorenie obsahu popup
         content = BoxLayout(orientation='vertical', padding=10, spacing=10)
         
         # Informácie o upozornení
         content.add_widget(Label(
-            text=f"{sensor_type} sensor {status}",
+            text=f"{sensor_type} senzor {status}",
             font_size=18,
             size_hint_y=0.1
         ))
@@ -298,14 +297,14 @@ class AlertsScreen(BaseScreen):
                 img_box.add_widget(img)
                 image_grid.add_widget(img_box)
             except Exception as e:
-                print(f"ERROR: Nemožno načítať obrázok {img_path}: {e}")
+                print(f"CHYBA: Nemožno načítať obrázok {img_path}: {e}")
                 
         image_scroll.add_widget(image_grid)
         content.add_widget(image_scroll)
         
         # Tlačidlo na zatvorenie
         close_button = Button(
-            text="Close",
+            text="Zatvoriť",
             size_hint_y=0.1
         )
         content.add_widget(close_button)
@@ -325,11 +324,11 @@ class AlertsScreen(BaseScreen):
         content = BoxLayout(orientation='vertical', padding=10)
         content.add_widget(Label(text=message))
         
-        button = Button(text="Close", size_hint_y=0.3)
+        button = Button(text="Zatvoriť", size_hint_y=0.3)
         content.add_widget(button)
         
         popup = Popup(
-            title="Error",
+            title="Chyba",
             content=content,
             size_hint=(0.7, 0.4)
         )
@@ -338,7 +337,7 @@ class AlertsScreen(BaseScreen):
         popup.open()
 
 class GracePeriodAlert(Popup):
-    """Popup alert showing grace period countdown before full alarm triggers"""
+    """Vyskakovacie upozornenie zobrazujúce odpočet ochrannej doby pred spustením plného alarmu"""
     
     def __init__(self, alert_data, grace_seconds=30, **kwargs):
         self.alert_data = alert_data
@@ -346,12 +345,12 @@ class GracePeriodAlert(Popup):
         self.time_remaining = grace_seconds
         self.pin_input = ""
         
-        # Create the popup content
+        # Vytvorenie obsahu vyskakovacieho okna
         content = BoxLayout(orientation='vertical', padding=20, spacing=10)
         
-        # Warning header
+        # Varovná hlavička
         warning_label = Label(
-            text="SECURITY ALERT!",
+            text="BEZPEČNOSTNÝ ALARM!",
             font_size=24,
             bold=True,
             color=(1, 0, 0, 1),
@@ -359,22 +358,22 @@ class GracePeriodAlert(Popup):
         )
         content.add_widget(warning_label)
         
-        # Alert details
-        device_name = alert_data.get('device_name', 'Unknown Device')
-        sensor_type = alert_data.get('sensor_type', 'unknown').capitalize()
-        status = alert_data.get('status', 'UNKNOWN')
+        # Detaily upozornenia
+        device_name = alert_data.get('device_name', 'Neznáme zariadenie')
+        sensor_type = alert_data.get('sensor_type', 'neznámy').capitalize()
+        status = alert_data.get('status', 'NEZNÁMY')
         
         details_label = Label(
-            text=f"{sensor_type} sensor {status}\nDevice: {device_name}",
+            text=f"{sensor_type} senzor {status}\nZariadenie: {device_name}",
             font_size=18,
             halign='center',
             size_hint_y=0.2
         )
         content.add_widget(details_label)
         
-        # Countdown timer
+        # Časovač odpočtu
         self.countdown_label = Label(
-            text=f"System will alarm in {self.time_remaining} seconds",
+            text=f"Systém spustí alarm za {self.time_remaining} sekúnd",
             font_size=20,
             bold=True,
             color=(1, 0.3, 0.3, 1),
@@ -382,9 +381,9 @@ class GracePeriodAlert(Popup):
         )
         content.add_widget(self.countdown_label)
         
-        # PIN input field
+        # Pole pre zadanie PIN
         pin_layout = BoxLayout(orientation='horizontal', size_hint_y=0.2)
-        pin_layout.add_widget(Label(text="Enter PIN:", size_hint_x=0.3))
+        pin_layout.add_widget(Label(text="Zadajte PIN:", size_hint_x=0.3))
         
         self.pin_display = TextInput(
             password=True,
@@ -397,17 +396,17 @@ class GracePeriodAlert(Popup):
         pin_layout.add_widget(self.pin_display)
         content.add_widget(pin_layout)
         
-        # Numeric keypad
+        # Numerická klávesnica
         keypad = GridLayout(cols=3, spacing=5, size_hint_y=0.5)
         
-        # Add number buttons 1-9
+        # Pridanie tlačidiel s číslami 1-9
         for i in range(1, 10):
             btn = Button(text=str(i), font_size=18)
             btn.bind(on_release=self.on_number_press)
             keypad.add_widget(btn)
             
-        # Add Clear, 0, and Enter buttons
-        clear_btn = Button(text="Clear", font_size=16)
+        # Pridanie tlačidiel Vymazať, 0 a Potvrdiť
+        clear_btn = Button(text="Vymazať", font_size=16)
         clear_btn.bind(on_release=self.on_clear)
         keypad.add_widget(clear_btn)
         
@@ -415,71 +414,82 @@ class GracePeriodAlert(Popup):
         zero_btn.bind(on_release=self.on_number_press)
         keypad.add_widget(zero_btn)
         
-        enter_btn = Button(text="Enter", font_size=16)
+        enter_btn = Button(text="Potvrdiť", font_size=16)
         enter_btn.bind(on_release=self.on_enter)
         keypad.add_widget(enter_btn)
         
         content.add_widget(keypad)
         
-        # Initialize the popup
+        # Inicializácia vyskakovacieho okna
         super(GracePeriodAlert, self).__init__(
-            title="Security System Alert",
+            title="Upozornenie bezpečnostného systému",
             content=content,
             size_hint=(0.8, 0.7),
             auto_dismiss=False,
             **kwargs
         )
         
-        # Start countdown
+        # Spustenie odpočtu
         Clock.schedule_interval(self.update_countdown, 1)
     
     def on_number_press(self, instance):
-        """Handle number button press"""
+        """Spracovanie stlačenia číselného tlačidla"""
         self.pin_input += instance.text
         self.pin_display.text = "*" * len(self.pin_input)
     
     def on_clear(self, instance):
-        """Clear PIN input"""
+        """Vymazanie PIN vstupu"""
         self.pin_input = ""
         self.pin_display.text = ""
     
     def on_enter(self, instance):
-        """Validate PIN and disable system if correct"""
+        """Overenie PIN kódu a vypnutie systému, ak je správny"""
         from config.settings import validate_pin, toggle_system_state
-        
-        if validate_pin(self.pin_input):
-            # Pin is correct, disable the system
-            toggle_system_state(False)
-            
-            # Show confirmation and close
-            self.countdown_label.text = "System disabled"
-            self.countdown_label.color = (0, 0.7, 0, 1)
-            
-            # Stop the countdown
-            Clock.unschedule(self.update_countdown)
-            
-            # Close after 2 seconds
-            Clock.schedule_once(lambda dt: self.dismiss(), 2)
-        else:
-            # Pin is incorrect, show error
-            self.countdown_label.text = f"Incorrect PIN! {self.time_remaining}s remaining"
+        from notification_service import notification_service
+
+        try:
+            if validate_pin(self.pin_input):
+                # PIN je správny, vypnutie systému
+                toggle_system_state(False)
+                
+                # Vymazanie ochrannej doby v službe notifikácií
+                notification_service.clear_grace_period()
+
+                # Zobrazenie potvrdenia a zatvorenie
+                self.countdown_label.text = "Systém deaktivovaný"
+                self.countdown_label.color = (0, 0.7, 0, 1)
+
+                # Zastavenie odpočtu
+                Clock.unschedule(self.update_countdown)
+
+                # Zatvorenie po 2 sekundách
+                Clock.schedule_once(lambda dt: self.dismiss(), 2)
+            else:
+                # PIN je nesprávny, zobrazenie chyby
+                self.countdown_label.text = f"Nesprávny PIN! {self.time_remaining}s zostáva"
+                self.countdown_label.color = (1, 0.3, 0.3, 1)
+                self.pin_input = ""
+                self.pin_display.text = ""
+        except Exception as e:
+            print(f"Chyba počas overovania PIN: {e}")
+            self.countdown_label.text = "Vyskytla sa chyba. Prosím, skúste znova."
             self.countdown_label.color = (1, 0.3, 0.3, 1)
             self.pin_input = ""
             self.pin_display.text = ""
     
     def update_countdown(self, dt):
-        """Update countdown timer"""
+        """Aktualizácia časovača odpočtu"""
         self.time_remaining -= 1
         
         if self.time_remaining <= 0:
-            # Time's up, close popup (alarm will be triggered by notification service)
+            # Čas vypršal, zatvorenie vyskakovacieho okna (alarm bude spustený službou notifikácií)
             Clock.unschedule(self.update_countdown)
             self.dismiss()
             return False
         
-        # Update countdown text
-        if "Incorrect PIN" not in self.countdown_label.text:
-            self.countdown_label.text = f"System will alarm in {self.time_remaining} seconds"
+        # Aktualizácia textu odpočtu
+        if "Nesprávny PIN" not in self.countdown_label.text:
+            self.countdown_label.text = f"Systém spustí alarm za {self.time_remaining} sekúnd"
         else:
-            self.countdown_label.text = f"Incorrect PIN! {self.time_remaining}s remaining"
+            self.countdown_label.text = f"Nesprávny PIN! {self.time_remaining}s zostáva"
         return True

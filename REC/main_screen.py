@@ -35,7 +35,7 @@ class NumericKeypad(GridLayout):
             self.add_widget(btn)
             
         # Pridanie tlačidiel vymazať, 0 a potvrdiť
-        btn_clear = Button(text="Clear", font_size=20)
+        btn_clear = Button(text="Vymazať", font_size=20)
         btn_clear.bind(on_release=self.on_clear)
         self.add_widget(btn_clear)
         
@@ -43,7 +43,7 @@ class NumericKeypad(GridLayout):
         btn_0.bind(on_release=self.on_button_press)
         self.add_widget(btn_0)
         
-        btn_enter = Button(text="Enter", font_size=20)
+        btn_enter = Button(text="Potvrdiť", font_size=20)
         btn_enter.bind(on_release=self.on_enter)
         self.add_widget(btn_enter)
         
@@ -63,11 +63,11 @@ class MainScreen(BaseScreen):
         super(MainScreen, self).__init__(**kwargs)
         
         # Nastavenie titulku
-        self.set_title("Home Security System")
+        self.set_title("Bezpečnostný systém domácnosti")
         
         # Upravenie hlavičky - pridanie stavového štítku
         self.status_label = Label(
-            text="System Status: Inactive", 
+            text="Stav systému: Neaktívny", 
             font_size=18,
             size_hint_y=0.4
         )
@@ -79,7 +79,7 @@ class MainScreen(BaseScreen):
         # Súhrn zariadení
         devices_summary = BoxLayout(orientation='vertical', size_hint_y=0.3)
         devices_summary.add_widget(Label(
-            text="Connected Devices",
+            text="Pripojené zariadenia",
             font_size=18,
             bold=True,
             size_hint_y=0.3
@@ -93,7 +93,7 @@ class MainScreen(BaseScreen):
         # Posledné upozornenia
         alerts_summary = BoxLayout(orientation='vertical', size_hint_y=0.5)
         alerts_summary.add_widget(Label(
-            text="Recent Alerts",
+            text="Nedávne upozornenia",
             font_size=18,
             bold=True,
             size_hint_y=0.2
@@ -115,13 +115,13 @@ class MainScreen(BaseScreen):
         buttons_layout = GridLayout(cols=2, spacing=10)
         
         self.toggle_button = Button(
-            text="Activate System",
+            text="Aktivovať systém",
             font_size=20
         )
         self.toggle_button.bind(on_release=self.toggle_system)
         
         self.change_pin_button = Button(
-            text="Change PIN",
+            text="Zmeniť PIN",
             font_size=20
         )
         self.change_pin_button.bind(on_release=self.show_change_pin)
@@ -134,19 +134,19 @@ class MainScreen(BaseScreen):
         nav_layout = GridLayout(cols=3, spacing=10)
         
         dashboard_button = Button(
-            text="Sensor Dashboard",
+            text="Dashboard senzorov",
             font_size=20
         )
         dashboard_button.bind(on_release=self.open_dashboard)
         
         alerts_button = Button(
-            text="Alerts History",
+            text="História upozornení",
             font_size=20
         )
         alerts_button.bind(on_release=self.open_alerts)
         
         settings_button = Button(
-            text="Settings",
+            text="Nastavenia",
             font_size=20
         )
         settings_button.bind(on_release=self.open_settings)
@@ -178,7 +178,7 @@ class MainScreen(BaseScreen):
         
         if not devices:
             self.devices_grid.add_widget(Label(
-                text="No devices connected",
+                text="Žiadne pripojené zariadenia",
                 font_size=16,
                 size_hint_x=1,
                 halign='center'
@@ -202,19 +202,19 @@ class MainScreen(BaseScreen):
                     
         # Prvý stĺpec - Celkový počet
         self.devices_grid.add_widget(Label(
-            text=f"Total: {total_devices}",
+            text=f"Celkovo: {total_devices}",
             font_size=16
         ))
         
         # Druhý stĺpec - Aktívne
         self.devices_grid.add_widget(Label(
-            text=f"Active: {active_devices}",
+            text=f"Aktívne: {active_devices}",
             font_size=16,
             color=(0, 1, 0, 1) if active_devices > 0 else (1, 0, 0, 1)
         ))
         
         # Tretí stĺpec - Indikátor stavu
-        status_text = "All Online" if active_devices == total_devices else "Some Offline"
+        status_text = "Všetky online" if active_devices == total_devices else "Niektoré offline"
         status_color = (0, 1, 0, 1) if active_devices == total_devices else (1, 0.7, 0, 1)
         
         self.devices_grid.add_widget(Label(
@@ -232,16 +232,16 @@ class MainScreen(BaseScreen):
         
         if not alerts:
             self.alerts_list.add_widget(Label(
-                text="No recent alerts",
+                text="Žiadne nedávne upozornenia",
                 font_size=16
             ))
             return
             
         # Zobrazenie upozornení
         for alert in alerts:
-            device_name = alert.get('device_name', 'Unknown Device')
-            sensor_type = alert.get('sensor_type', 'unknown').capitalize()
-            status = alert.get('status', 'UNKNOWN')
+            device_name = alert.get('device_name', 'Neznáme zariadenie')
+            sensor_type = alert.get('sensor_type', 'neznámy').capitalize()
+            status = alert.get('status', 'NEZNÁMY')
             timestamp = alert.get('timestamp', 0)
             
             # Formátovanie časovej pečiatky
@@ -266,14 +266,14 @@ class MainScreen(BaseScreen):
         system_active = get_setting("system_active", False)
         
         if system_active:
-            self.status_label.text = "System Status: ACTIVE"
+            self.status_label.text = "Stav systému: AKTÍVNY"
             self.status_label.color = (0, 1, 0, 1)  # Zelená pre aktívny stav
-            self.toggle_button.text = "Deactivate System"
+            self.toggle_button.text = "Deaktivovať systém"
             self.toggle_button.background_color = (1, 0.5, 0.5, 1)  # Červená pre deaktiváciu
         else:
-            self.status_label.text = "System Status: INACTIVE"
+            self.status_label.text = "Stav systému: NEAKTÍVNY"
             self.status_label.color = (1, 0, 0, 1)  # Červená pre neaktívny stav
-            self.toggle_button.text = "Activate System"
+            self.toggle_button.text = "Aktivovať systém"
             self.toggle_button.background_color = (0.5, 1, 0.5, 1)  # Zelená pre aktiváciu
             
         # Aktualizácia súhrnu zariadení a upozornení
@@ -285,7 +285,7 @@ class MainScreen(BaseScreen):
     def toggle_system(self, instance):
         """Zobrazenie PIN dialógu na prepnutie stavu systému"""
         self.pin_popup = Popup(
-            title='Enter PIN',
+            title='Zadajte PIN',
             size_hint=(0.8, 0.8),
             auto_dismiss=True
         )
@@ -312,8 +312,8 @@ class MainScreen(BaseScreen):
             
             # Zobrazenie chybového okna
             error_popup = Popup(
-                title='Error',
-                content=Label(text='Invalid PIN'),
+                title='Chyba',
+                content=Label(text='Neplatný PIN'),
                 size_hint=(0.5, 0.3)
             )
             error_popup.open()
@@ -321,7 +321,7 @@ class MainScreen(BaseScreen):
     def show_change_pin(self, instance):
         """Zobrazenie dialógu na zmenu PIN-u"""
         self.pin_popup = Popup(
-            title='Enter Current PIN',
+            title='Zadajte aktuálny PIN',
             size_hint=(0.8, 0.8),
             auto_dismiss=True
         )
@@ -338,7 +338,7 @@ class MainScreen(BaseScreen):
             
             # Zobrazenie dialógu nového PIN-u
             self.new_pin_popup = Popup(
-                title='Enter New PIN',
+                title='Zadajte nový PIN',
                 size_hint=(0.8, 0.8),
                 auto_dismiss=True
             )
@@ -352,8 +352,8 @@ class MainScreen(BaseScreen):
             
             # Zobrazenie chybového okna
             error_popup = Popup(
-                title='Error',
-                content=Label(text='Invalid PIN'),
+                title='Chyba',
+                content=Label(text='Neplatný PIN'),
                 size_hint=(0.5, 0.3)
             )
             error_popup.open()
@@ -367,9 +367,9 @@ class MainScreen(BaseScreen):
             self.new_pin_popup.dismiss()
             
             # Zobrazenie potvrdzovacieho okna
-            message = 'PIN updated successfully' if success else 'Failed to update PIN'
+            message = 'PIN úspešne aktualizovaný' if success else 'Zlyhala aktualizácia PIN'
             confirm_popup = Popup(
-                title='PIN Change',
+                title='Zmena PIN',
                 content=Label(text=message),
                 size_hint=(0.5, 0.3)
             )
@@ -380,8 +380,8 @@ class MainScreen(BaseScreen):
             
             # Zobrazenie chybového okna
             error_popup = Popup(
-                title='Error',
-                content=Label(text='PIN must be at least 4 digits'),
+                title='Chyba',
+                content=Label(text='PIN musí mať aspoň 4 číslice'),
                 size_hint=(0.5, 0.3)
             )
             error_popup.open()
@@ -400,33 +400,33 @@ class MainScreen(BaseScreen):
         self.manager.current = 'settings'
     
     def check_grace_period(self, dt):
-        """Check if there's an active grace period and show alert if needed"""
-        # Import notification service here to avoid circular imports
+        """Kontrola, či existuje aktívna ochranná doba a zobrazenie upozornenia v prípade potreby"""
+        # Import notification service tu, aby sa predišlo cyklickým importom
         from notification_service import notification_service
         
-        # Get current grace period status
+        # Získanie aktuálneho stavu ochrannej doby
         grace_status = notification_service.get_grace_period_status()
         
-        # If there's an active grace period and no popup is currently shown
+        # Ak existuje aktívna ochranná doba a momentálne nie je zobrazené žiadne vyskakovacie okno
         if grace_status and grace_status.get('active') and not self.grace_period_popup:
-            # Get alert data from the grace period
+            # Získanie dát upozornenia z ochrannej doby
             alert_data = grace_status.get('alert_data')
             if alert_data:
-                # Import the GracePeriodAlert class from alerts_screen
+                # Import triedy GracePeriodAlert z alerts_screen
                 from alerts_screen import GracePeriodAlert
                 
-                # Create and show the grace period alert popup
+                # Vytvorenie a zobrazenie vyskakovacieho okna ochrannej doby
                 self.grace_period_popup = GracePeriodAlert(alert_data, grace_seconds=30)
                 self.grace_period_popup.bind(on_dismiss=self.on_grace_period_popup_closed)
                 self.grace_period_popup.open()
-                print("DEBUG: Displaying grace period alert popup")
-                
-        # If no active grace period but popup is shown, make sure it gets cleaned up
-        elif not grace_status and self.grace_period_popup:
-            if self.grace_period_popup.time_remaining > 0:
-                self.grace_period_popup.dismiss()
+                print("DEBUG: Zobrazujem vyskakovacie okno ochrannej doby")
+        # Ak vyskakovacie okno existuje, ale systém bol deaktivovaný, zatvorí ho
+        elif self.grace_period_popup and not get_setting("system_active", False):
+            self.grace_period_popup.dismiss()
+            self.grace_period_popup = None
+            print("DEBUG: Vyskakovacie okno ochrannej doby zatvorené, pretože systém bol deaktivovaný")
     
     def on_grace_period_popup_closed(self, instance):
-        """Called when the grace period popup is closed"""
+        """Volaná pri zatvorení vyskakovacieho okna ochrannej doby"""
         self.grace_period_popup = None
-        print("DEBUG: Grace period alert popup closed")
+        print("DEBUG: Vyskakovacie okno ochrannej doby zatvorené")

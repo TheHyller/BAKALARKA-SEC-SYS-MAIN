@@ -272,91 +272,66 @@ def update_sensor_status(device_id, status_data):
 # Funkcia pre správu upozornení
 
 def get_alerts(count=None, unread_only=False):
-    """Get stored alerts from the system
+    """Získanie uložených upozornení zo systému - ZASTARANÉ
+    
+    Použite alerts_log.get_alerts() namiesto toho.
+    Táto funkcia je zachovaná pre spätnú kompatibilitu.
     
     Args:
-        count (int): Maximum number of alerts to return
-        unread_only (bool): Whether to include only unread alerts
+        count (int): Maximálny počet upozornení na vrátenie
+        unread_only (bool): Či zahrnúť iba neprečítané upozornenia
     
     Returns:
-        list: List of alerts
+        list: Zoznam upozornení
     """
-    alerts = settings_manager.get("alerts.items", [])
-    
-    # Ensure alerts is a list
-    if not isinstance(alerts, list):
-        alerts = []
-    
-    # Filter by read status if requested
-    if unread_only:
-        alerts = [alert for alert in alerts if not alert.get("read", False)]
-    
-    # Sort alerts by timestamp (newest first)
-    alerts = sorted(alerts, key=lambda x: x.get("timestamp", 0), reverse=True)
-    
-    # Limit results if count is specified
-    if count is not None and isinstance(count, int) and count > 0:
-        alerts = alerts[:count]
-    
-    return alerts
+    # Import tu na predídenie cirkulárnym importom
+    from config.alerts_log import get_alerts as get_alerts_from_log
+    return get_alerts_from_log(count, unread_only)
 
 def add_alert(alert_data):
-    """Pridá nové upozornenie do systému
+    """Pridanie nového upozornenia do systému - ZASTARANÉ
+    
+    Použite alerts_log.add_alert() namiesto toho.
+    Táto funkcia je zachovaná pre spätnú kompatibilitu.
     
     Args:
         alert_data (dict): Dáta upozornenia (typ, správa, atď.)
     
     Returns:
-        bool: True ak bolo upozornenie úspešne pridané
+        bool: True, ak bolo upozornenie úspešne pridané
     """
-    # Zabezpeč, že základné polia sú prítomné
-    alert = {
-        "id": int(time.time() * 1000),  # Unikátne ID na základe časovej značky v milisekundách
-        "timestamp": time.time(),
-        "read": False,
-        "type": alert_data.get("type", "Info"),
-        "message": alert_data.get("message", "Neznáme upozornenie")
-    }
-    
-    # Pridaj akékoľvek ďalšie dáta
-    alert.update(alert_data)
-    
-    # Získaj aktuálne upozornenia a pridaj nové
-    alerts = settings_manager.get("alerts.items", [])
-    alerts.append(alert)
-    
-    # Ukladá upozornenia naspäť a zachováva najnovšie upozornenia
-    retention_days = settings_manager.get("alerts.retention_days", 30)
-    cutoff_time = time.time() - (retention_days * 24 * 3600)
-    
-    # Odstráň staré upozornenia
-    alerts = [a for a in alerts if a.get("timestamp", 0) > cutoff_time]
-    
-    # Uloženie aktualizovaných upozornení
-    return settings_manager.update("alerts.items", alerts)
+    # Import tu na predídenie cirkulárnym importom
+    from config.alerts_log import add_alert as add_alert_to_log
+    return add_alert_to_log(alert_data)
 
 def mark_alert_as_read(alert_index):
-    """Mark an alert as read
+    """Označenie upozornenia ako prečítané - ZASTARANÉ
+    
+    Použite alerts_log.mark_alert_as_read() namiesto toho.
+    Táto funkcia je zachovaná pre spätnú kompatibilitu.
     
     Args:
-        alert_index (int): Index of the alert in the list to mark as read
+        alert_index (int): Index upozornenia v zozname, ktoré sa má označiť ako prečítané
     
     Returns:
-        bool: True if alert was successfully marked as read
+        bool: True, ak bolo upozornenie úspešne označené ako prečítané
     """
-    alerts = settings_manager.get("alerts.items", [])
+    # Import tu na predídenie cirkulárnym importom
+    from config.alerts_log import mark_alert_as_read as mark_alert_read_in_log
+    return mark_alert_read_in_log(alert_index)
+
+def mark_all_alerts_as_read():
+    """Označenie všetkých upozornení ako prečítané - ZASTARANÉ
     
-    # Make sure alerts is a list and index is valid
-    if not isinstance(alerts, list) or not alerts:
-        return False
+    Použite alerts_log.mark_all_alerts_as_read() namiesto toho.
+    Táto funkcia je zachovaná pre spätnú kompatibilitu.
     
-    # Check if index is valid
-    if 0 <= alert_index < len(alerts):
-        alerts[alert_index]["read"] = True
-        alerts[alert_index]["read_timestamp"] = time.time()
-        return settings_manager.update("alerts.items", alerts)
-    
-    return False
+    Returns:
+        bool: True, ak boli všetky upozornenia úspešne označené ako prečítané
+    """
+    # Import tu na predídenie cirkulárnym importom
+    from config.alerts_log import mark_all_alerts_as_read as mark_all_read_in_log
+    return mark_all_read_in_log()
 
 def cleanup_old_images():
     """Vymaže staré obrázky podľa nastavenia retencie

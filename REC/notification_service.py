@@ -301,24 +301,32 @@ class NotificationService:
         }
     
     def get_grace_period_remaining_time(self):
-        """Returns the number of seconds remaining in the grace period
+        """Vráti počet sekúnd zostávajúcich v ochrannej dobe
         
         Returns:
-            int: Seconds remaining, or 0 if no grace period is active
+            int: Zostávajúce sekundy, alebo 0 ak nie je aktívna žiadna ochranná doba
         """
         if not self.is_in_grace_period or not self.grace_period_timer:
             return 0
             
-        # Get remaining time by checking the timer's remaining time
-        # The timer's _target_time is when it will fire (private attribute)
+        # Získaj zostávajúci čas kontrolou zostávajúceho času časovača
+        # Atribút _target_time časovača je čas, kedy sa aktivuje (privátny atribút)
         if hasattr(self.grace_period_timer, '_target_time'):
             current_time = time.time()
             target_time = self.grace_period_timer._target_time
             remaining = max(0, int(target_time - current_time))
             return remaining
             
-        # Fallback if we can't access the timer's target time
-        return 30  # Default to 30 seconds
+        # Záložný plán, ak nemôžeme pristúpiť k cieľovému času časovača
+        return 30  # Predvolene 30 sekúnd
+
+    def clear_grace_period(self):
+        """Vymaže ochrannú dobu a zastaví všetky súvisiace alarmy"""
+        result = self.cancel_grace_period()
+        # Tiež zastaví akýkoľvek alarm, ktorý by sa mohol prehrávať
+        self.stop_alarm()
+        print("DEBUG: Ochranná doba úplne vymazaná a alarm zastavený")
+        return result
 
 # Vytvorenie globálnej inštancie pre jednoduchý prístup
 notification_service = NotificationService()
