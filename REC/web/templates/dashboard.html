@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Security System{% endblock %}
+{% block title %}Prehľad - Bezpečnostný systém{% endblock %}
 
 {% block content %}
 <!-- Grace Period Alert Modal -->
@@ -8,17 +8,17 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header bg-danger text-white">
-        <h5 class="modal-title" id="gracePeriodModalLabel">⚠️ SECURITY ALERT!</h5>
+        <h5 class="modal-title" id="gracePeriodModalLabel">⚠️ BEZPEČNOSTNÝ ALARM!</h5>
       </div>
       <div class="modal-body text-center">
-        <h4 id="alert-details" class="mb-3">Motion detected</h4>
+        <h4 id="alert-details" class="mb-3">Pohyb zaznamenaný</h4>
         <div class="alert alert-danger">
-          <h3 id="countdown-timer">System will alarm in <span id="seconds-remaining">30</span> seconds</h3>
+          <h3 id="countdown-timer">Systém spustí alarm za <span id="seconds-remaining">30</span> sekúnd</h3>
         </div>
-        <p>Disable the system to cancel the alarm.</p>
+        <p>Deaktivujte systém pre zrušenie alarmu.</p>
       </div>
       <div class="modal-footer justify-content-center">
-        <button type="button" class="btn btn-success btn-lg" id="disable-system-btn">DISABLE SYSTEM</button>
+        <button type="button" class="btn btn-success btn-lg" id="disable-system-btn">DEAKTIVOVAŤ SYSTÉM</button>
       </div>
     </div>
   </div>
@@ -29,31 +29,31 @@
     <div class="col-md-12 mb-4">
         <div class="card" id="status-card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">System Status</h5>
+                <h5 class="card-title mb-0">Stav systému</h5>
                 <span class="badge {% if system_active %}bg-success{% else %}bg-danger{% endif %}">
-                    {% if system_active %}ACTIVE{% else %}INACTIVE{% endif %}
+                    {% if system_active %}AKTÍVNY{% else %}NEAKTÍVNY{% endif %}
                 </span>
             </div>
             <div class="card-body">
                 <div class="row text-center">
                     <div class="col-md-4">
-                        <h4>Status</h4>
+                        <h4>Stav</h4>
                         <p class="{% if system_active %}system-active{% else %}system-inactive{% endif %}" id="system-status-text">
-                            {% if system_active %}ACTIVE{% else %}INACTIVE{% endif %}
+                            {% if system_active %}AKTÍVNY{% else %}NEAKTÍVNY{% endif %}
                         </p>
                         <button id="toggle-system-btn" class="btn {% if system_active %}btn-danger{% else %}btn-success{% endif %}">
-                            {% if system_active %}Deactivate{% else %}Activate{% endif %} System
+                            {% if system_active %}Deaktivovať{% else %}Aktivovať{% endif %} systém
                         </button>
                     </div>
                     <div class="col-md-4">
-                        <h4>Devices</h4>
-                        <p id="device-count">{{ active_devices }} active out of {{ total_devices }} total</p>
-                        <a href="{{ url_for('sensors_page') }}" class="btn btn-primary">View Devices</a>
+                        <h4>Zariadenia</h4>
+                        <p id="device-count">{{ active_devices }} aktívnych z celkových {{ total_devices }}</p>
+                        <a href="{{ url_for('sensors_page') }}" class="btn btn-primary">Zobraziť zariadenia</a>
                     </div>
                     <div class="col-md-4">
-                        <h4>Alerts</h4>
-                        <p id="alert-count">{{ unread_alerts }} unread out of {{ total_alerts }} total</p>
-                        <a href="{{ url_for('alerts_page') }}" class="btn btn-primary">View Alerts</a>
+                        <h4>Upozornenia</h4>
+                        <p id="alert-count">{{ unread_alerts }} neprečítaných z celkových {{ total_alerts }}</p>
+                        <a href="{{ url_for('alerts_page') }}" class="btn btn-primary">Zobraziť upozornenia</a>
                     </div>
                 </div>
             </div>
@@ -66,8 +66,8 @@
     <div class="col-md-8">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Recent Alerts</h5>
-                <a href="{{ url_for('alerts_page') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                <h5 class="card-title mb-0">Nedávne upozornenia</h5>
+                <a href="{{ url_for('alerts_page') }}" class="btn btn-sm btn-outline-primary">Zobraziť všetko</a>
             </div>
             <div class="card-body p-0">
                 <div class="list-group list-group-flush">
@@ -78,15 +78,15 @@
                                 <h6 class="mb-1">{{ alert.device_name }}</h6>
                                 <small>{{ alert.timestamp }}</small>
                             </div>
-                            <p class="mb-1">{{ alert.sensor_type|capitalize }} sensor {{ alert.status }}</p>
+                            <p class="mb-1">{{ alert.sensor_type|capitalize }} senzor {{ alert.status }}</p>
                             {% if not alert.read %}
-                            <span class="badge bg-info">New</span>
+                            <span class="badge bg-info">Nové</span>
                             {% endif %}
                         </div>
                         {% endfor %}
                     {% else %}
                         <div class="list-group-item">
-                            <p class="mb-0 text-center">No recent alerts</p>
+                            <p class="mb-0 text-center">Žiadne nedávne upozornenia</p>
                         </div>
                     {% endif %}
                 </div>
@@ -98,8 +98,8 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Device Status</h5>
-                <a href="{{ url_for('sensors_page') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                <h5 class="card-title mb-0">Stav zariadení</h5>
+                <a href="{{ url_for('sensors_page') }}" class="btn btn-sm btn-outline-primary">Zobraziť všetko</a>
             </div>
             <div class="card-body p-0">
                 <div class="list-group list-group-flush">
@@ -118,7 +118,7 @@
                                         <small>{{ last_seen }}</small>
                                     {% endif %}
                                 {% else %}
-                                    <small>Never seen</small>
+                                    <small>Nikdy nevidené</small>
                                 {% endif %}
                             </div>
                             <p class="mb-1">
@@ -127,22 +127,22 @@
                                     {% if 'T' in last_seen_timestamp %}
                                         {% set active = device.active|default(false) %}
                                         <span class="badge {% if active %}bg-success{% else %}bg-danger{% endif %}">
-                                            {% if active %}Active{% else %}Offline{% endif %}
+                                            {% if active %}Aktívne{% else %}Offline{% endif %}
                                         </span>
                                     {% else %}
-                                        <span class="badge bg-secondary">Unknown</span>
+                                        <span class="badge bg-secondary">Neznáme</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="badge bg-danger">Never connected</span>
+                                    <span class="badge bg-danger">Nikdy nepripojené</span>
                                 {% endif %}
                                 
-                                IP: {{ device.ip|default('Unknown') }}
+                                IP: {{ device.ip|default('Neznáma') }}
                             </p>
                         </div>
                         {% endfor %}
                     {% else %}
                         <div class="list-group-item">
-                            <p class="mb-0 text-center">No devices connected</p>
+                            <p class="mb-0 text-center">Žiadne pripojené zariadenia</p>
                         </div>
                     {% endif %}
                 </div>
@@ -175,35 +175,35 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    console.log('Successfully cleared grace period and alerts');
+                    console.log('Úspešne zrušená ochranná doba a upozornenia');
                     
                     // Update UI
                     const statusText = document.getElementById('system-status-text');
                     const statusBadge = document.querySelector('#status-card .badge');
                     const toggleBtn = document.getElementById('toggle-system-btn');
                     
-                    statusText.innerText = 'INACTIVE';
+                    statusText.innerText = 'NEAKTÍVNY';
                     statusText.className = 'system-inactive';
-                    statusBadge.innerText = 'INACTIVE';
+                    statusBadge.innerText = 'NEAKTÍVNY';
                     statusBadge.className = 'badge bg-danger';
-                    toggleBtn.innerText = 'Activate System';
+                    toggleBtn.innerText = 'Aktivovať systém';
                     toggleBtn.className = 'btn btn-success';
                     
                     // Show success message in the modal
                     document.getElementById('countdown-timer').innerHTML = 
-                        '<span class="text-success">System successfully disabled</span>';
+                        '<span class="text-success">Systém úspešne deaktivovaný</span>';
                     
                     // Close the modal after 2 seconds
                     setTimeout(function() {
                         gracePeriodModal.hide();
                     }, 2000);
                 } else {
-                    alert('Failed to disable system: ' + data.message);
+                    alert('Nepodarilo sa deaktivovať systém: ' + data.message);
                 }
             })
             .catch(error => {
-                console.error('Error disabling system:', error);
-                alert('An error occurred while disabling the system.');
+                console.error('Chyba pri deaktivácii systému:', error);
+                alert('Nastala chyba pri deaktivácii systému.');
             });
         });
         
@@ -224,12 +224,16 @@
                         const alertDetails = data.alert_data;
                         
                         // Update modal content
-                        let alertText = "Security alert detected";
+                        let alertText = "Bezpečnostný alarm detekovaný";
                         if (alertDetails && alertDetails.sensor_type && alertDetails.device_name) {
                             // Format: "Motion detected on Device Name"
-                            alertText = alertDetails.sensor_type.charAt(0).toUpperCase() + 
-                                       alertDetails.sensor_type.slice(1) + 
-                                       " detected on " + alertDetails.device_name;
+                            // Translate sensor types
+                            let sensorType = alertDetails.sensor_type;
+                            if (sensorType === "motion") sensorType = "Pohyb";
+                            else if (sensorType === "door") sensorType = "Dvere";
+                            else if (sensorType === "window") sensorType = "Okno";
+                            
+                            alertText = sensorType + " zaznamenaný na zariadení " + alertDetails.device_name;
                         }
                         document.getElementById('alert-details').innerText = alertText;
                         
@@ -261,7 +265,7 @@
                     }
                 })
                 .catch(error => {
-                    console.error('Error checking grace period status:', error);
+                    console.error('Chyba pri kontrole stavu ochrannej doby:', error);
                 });
         }, 1000);
     }
@@ -288,27 +292,27 @@
                 const statusBadge = document.querySelector('#status-card .badge');
                 
                 if (data.system_active) {
-                    statusText.innerText = 'ACTIVE';
+                    statusText.innerText = 'AKTÍVNY';
                     statusText.className = 'system-active';
-                    statusBadge.innerText = 'ACTIVE';
+                    statusBadge.innerText = 'AKTÍVNY';
                     statusBadge.className = 'badge bg-success';
-                    toggleBtn.innerText = 'Deactivate System';
+                    toggleBtn.innerText = 'Deaktivovať systém';
                     toggleBtn.className = 'btn btn-danger';
                 } else {
-                    statusText.innerText = 'INACTIVE';
+                    statusText.innerText = 'NEAKTÍVNY';
                     statusText.className = 'system-inactive';
-                    statusBadge.innerText = 'INACTIVE';
+                    statusBadge.innerText = 'NEAKTÍVNY';
                     statusBadge.className = 'badge bg-danger';
-                    toggleBtn.innerText = 'Activate System';
+                    toggleBtn.innerText = 'Aktivovať systém';
                     toggleBtn.className = 'btn btn-success';
                 }
             } else {
-                alert('Failed to toggle system status: ' + data.message);
+                alert('Nepodarilo sa prepnúť stav systému: ' + data.message);
             }
         })
         .catch(error => {
-            console.error('Error toggling system:', error);
-            alert('An error occurred while toggling the system status.');
+            console.error('Chyba pri prepínaní systému:', error);
+            alert('Nastala chyba pri prepínaní stavu systému.');
         })
         .finally(() => {
             toggleBtn.disabled = false;
@@ -323,15 +327,15 @@
                 .then(data => {
                     // Update UI with fresh data
                     document.getElementById('system-status-text').innerText = 
-                        data.system_active ? 'ACTIVE' : 'INACTIVE';
+                        data.system_active ? 'AKTÍVNY' : 'NEAKTÍVNY';
                     document.getElementById('system-status-text').className = 
                         data.system_active ? 'system-active' : 'system-inactive';
                     
                     document.getElementById('device-count').innerText = 
-                        `${data.devices.active} active out of ${data.devices.total} total`;
+                        `${data.devices.active} aktívnych z celkových ${data.devices.total}`;
                     
                     document.getElementById('alert-count').innerText = 
-                        `${data.alerts.unread} unread out of ${data.alerts.total} total`;
+                        `${data.alerts.unread} neprečítaných z celkových ${data.alerts.total}`;
                     
                     // Safely check the total alerts difference
                     try {
@@ -340,11 +344,11 @@
                             window.location.reload();
                         }
                     } catch(e) {
-                        console.error('Error comparing alert counts:', e);
+                        console.error('Chyba pri porovnávaní počtu upozornení:', e);
                     }
                 })
                 .catch(error => {
-                    console.error('Error refreshing dashboard:', error);
+                    console.error('Chyba pri obnovovaní prehľadu:', error);
                 });
         }, 30000);
     }

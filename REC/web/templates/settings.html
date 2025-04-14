@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Settings - Security System{% endblock %}
+{% block title %}Nastavenia - Bezpečnostný systém{% endblock %}
 
 {% block content %}
 <div class="row">
@@ -8,29 +8,29 @@
     <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">System Control</h5>
+                <h5 class="card-title mb-0">Ovládanie systému</h5>
             </div>
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h6>System Status:</h6>
+                    <h6>Stav systému:</h6>
                     <span class="badge {% if system_active %}bg-success{% else %}bg-danger{% endif %} p-2">
-                        {% if system_active %}ACTIVE{% else %}INACTIVE{% endif %}
+                        {% if system_active %}AKTÍVNY{% else %}NEAKTÍVNY{% endif %}
                     </span>
                 </div>
                 
                 <form action="{{ url_for('settings_page') }}" method="post">
                     <input type="hidden" name="toggle_system" value="1">
                     <button type="submit" class="btn btn-lg w-100 {% if system_active %}btn-danger{% else %}btn-success{% endif %}">
-                        {% if system_active %}Deactivate{% else %}Activate{% endif %} Security System
+                        {% if system_active %}Deaktivovať{% else %}Aktivovať{% endif %} bezpečnostný systém
                     </button>
                 </form>
                 
                 <div class="alert alert-info mt-4">
                     <small>
                         {% if system_active %}
-                        The security system is currently active and will generate alerts when sensors detect activity.
+                        Bezpečnostný systém je momentálne aktívny a bude generovať upozornenia, keď senzory zachytia aktivitu.
                         {% else %}
-                        The security system is currently inactive. No alerts will be generated until you activate the system.
+                        Bezpečnostný systém je momentálne neaktívny. Upozornenia nebudú generované, kým systém neaktivujete.
                         {% endif %}
                     </small>
                 </div>
@@ -42,31 +42,31 @@
     <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">PIN Management</h5>
+                <h5 class="card-title mb-0">Správa PIN kódu</h5>
             </div>
             <div class="card-body">
-                <p>Change your system access PIN:</p>
+                <p>Zmeniť prístupový PIN kód systému:</p>
                 
                 <form id="change-pin-form" class="mt-3" action="/settings/change-pin" method="post">
                     <div class="mb-3">
-                        <label for="current-pin" class="form-label">Current PIN</label>
+                        <label for="current-pin" class="form-label">Aktuálny PIN</label>
                         <input type="password" class="form-control" id="current-pin" name="current_pin" required>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="new-pin" class="form-label">New PIN</label>
+                        <label for="new-pin" class="form-label">Nový PIN</label>
                         <input type="password" class="form-control" id="new-pin" name="new_pin" required 
                                minlength="4" maxlength="8">
-                        <div class="form-text">PIN must be 4-8 digits</div>
+                        <div class="form-text">PIN musí mať 4-8 číslic</div>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="confirm-pin" class="form-label">Confirm New PIN</label>
+                        <label for="confirm-pin" class="form-label">Potvrdiť nový PIN</label>
                         <input type="password" class="form-control" id="confirm-pin" name="confirm_pin" required
                                minlength="4" maxlength="8">
                     </div>
                     
-                    <button type="submit" class="btn btn-primary">Change PIN</button>
+                    <button type="submit" class="btn btn-primary">Zmeniť PIN</button>
                 </form>
             </div>
         </div>
@@ -78,7 +78,7 @@
     <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">Network Settings</h5>
+                <h5 class="card-title mb-0">Sieťové nastavenia</h5>
             </div>
             <div class="card-body">
                 <form action="/settings/network" method="post">
@@ -95,13 +95,13 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label for="discovery-port" class="form-label">Discovery Port</label>
+                        <label for="discovery-port" class="form-label">Port pre vyhľadávanie</label>
                         <input type="number" class="form-control" id="discovery-port" name="discovery_port" 
                                value="8082" min="1024" max="65535">
                     </div>
                     
-                    <button type="submit" class="btn btn-primary" disabled>Save Network Settings</button>
-                    <small class="text-muted d-block mt-2">Network settings can only be changed from the desktop application</small>
+                    <button type="submit" class="btn btn-primary" disabled>Uložiť sieťové nastavenia</button>
+                    <small class="text-muted d-block mt-2">Sieťové nastavenia je možné zmeniť len z desktopovej aplikácie</small>
                 </form>
             </div>
         </div>
@@ -111,32 +111,32 @@
     <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">Alert Settings</h5>
+                <h5 class="card-title mb-0">Nastavenia upozornení</h5>
             </div>
             <div class="card-body">
                 <form action="/settings/alerts" method="post">
                     <div class="mb-3 form-check form-switch">
                         <input class="form-check-input" type="checkbox" id="alert-sound" name="alert_sound" checked>
-                        <label class="form-check-label" for="alert-sound">Alert Sound</label>
+                        <label class="form-check-label" for="alert-sound">Zvuk upozornení</label>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="notification-type" class="form-label">Notification Type</label>
+                        <label for="notification-type" class="form-label">Typ notifikácie</label>
                         <select class="form-select" id="notification-type" name="notification_type">
-                            <option value="Visual">Visual</option>
-                            <option value="Visual + Sound" selected>Visual + Sound</option>
-                            <option value="Full Screen">Full Screen</option>
+                            <option value="Visual">Vizuálna</option>
+                            <option value="Visual + Sound" selected>Vizuálna + zvuk</option>
+                            <option value="Full Screen">Celoobrazovková</option>
                         </select>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="retention-days" class="form-label">Alert History Retention (days)</label>
+                        <label for="retention-days" class="form-label">Uchovávanie histórie upozornení (dni)</label>
                         <input type="number" class="form-control" id="retention-days" name="retention_days" 
                                value="30" min="1" max="365">
                     </div>
                     
-                    <button type="submit" class="btn btn-primary" disabled>Save Alert Settings</button>
-                    <small class="text-muted d-block mt-2">Alert settings can only be changed from the desktop application</small>
+                    <button type="submit" class="btn btn-primary" disabled>Uložiť nastavenia upozornení</button>
+                    <small class="text-muted d-block mt-2">Nastavenia upozornení je možné zmeniť len z desktopovej aplikácie</small>
                 </form>
             </div>
         </div>
@@ -156,12 +156,12 @@
                 const confirmPin = document.getElementById('confirm-pin').value;
                 
                 if (newPin !== confirmPin) {
-                    alert('New PIN and confirmation do not match');
+                    alert('Nový PIN a potvrdenie sa nezhodujú');
                     return;
                 }
                 
                 // For demo purposes, just show an alert
-                alert('PIN change functionality is disabled in the web interface. Please use the desktop application to change your PIN.');
+                alert('Funkcia zmeny PIN kódu je v webovom rozhraní deaktivovaná. Prosím, použite desktopovú aplikáciu na zmenu vášho PIN kódu.');
             });
         }
     });

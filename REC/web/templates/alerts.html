@@ -1,23 +1,23 @@
 {% extends "base.html" %}
 
-{% block title %}Alerts - Security System{% endblock %}
+{% block title %}Upozornenia - Bezpečnostný systém{% endblock %}
 
 {% block content %}
 <div class="card">
     <div class="card-header">
         <div class="d-flex justify-content-between align-items-center">
-            <h5 class="card-title mb-0">System Alerts</h5>
+            <h5 class="card-title mb-0">Systémové upozornenia</h5>
             <div>
                 <a href="{{ url_for('alerts_page', unread_only='true') }}" class="btn btn-sm btn-outline-primary {% if unread_only %}active{% endif %}">
-                    Unread Only
+                    Len neprečítané
                 </a>
                 <a href="{{ url_for('alerts_page') }}" class="btn btn-sm btn-outline-primary {% if not unread_only %}active{% endif %}">
-                    All Alerts
+                    Všetky upozornenia
                 </a>
                 <form action="{{ url_for('mark_all_alerts_read') }}" method="post" class="d-inline">
                     <button type="submit" class="btn btn-sm btn-outline-secondary" 
                             {% if total_unread == 0 %}disabled{% endif %}>
-                        Mark All as Read
+                        Označiť všetky ako prečítané
                     </button>
                 </form>
             </div>
@@ -33,20 +33,20 @@
                         <small>{{ alert.timestamp }}</small>
                     </div>
                     <p class="mb-1">
-                        <strong>{{ alert.sensor_type|capitalize }} sensor:</strong> {{ alert.status }}
+                        <strong>{{ alert.sensor_type|capitalize }} senzor:</strong> {{ alert.status }}
                     </p>
                     <div class="d-flex mt-2">
                         {% if not alert.read %}
                         <form action="{{ url_for('mark_alert_read_route', alert_index=alert.index) }}" method="post" class="me-2">
                             <button type="submit" class="btn btn-sm btn-outline-primary">
-                                Mark as Read
+                                Označiť ako prečítané
                             </button>
                         </form>
                         {% endif %}
                         
                         {% if alert.has_image %}
                         <a href="{{ url_for('images_page', sensor_type=alert.sensor_type) }}" class="btn btn-sm btn-outline-info">
-                            View Images
+                            Zobraziť obrázky
                         </a>
                         {% endif %}
                     </div>
@@ -54,7 +54,7 @@
                 {% endfor %}
             {% else %}
                 <div class="list-group-item">
-                    <p class="text-center mb-0">No alerts found</p>
+                    <p class="text-center mb-0">Žiadne upozornenia</p>
                 </div>
             {% endif %}
         </div>
@@ -62,16 +62,16 @@
     {% if alerts and alerts|length >= 10 %}
     <div class="card-footer">
         <div class="d-flex justify-content-center">
-            <nav aria-label="Alerts pagination">
+            <nav aria-label="Stránkovanie upozornení">
                 <ul class="pagination mb-0">
                     <li class="page-item disabled">
-                        <a class="page-link" href="#" tabindex="-1">Previous</a>
+                        <a class="page-link" href="#" tabindex="-1">Predchádzajúca</a>
                     </li>
                     <li class="page-item active"><a class="page-link" href="#">1</a></li>
                     <li class="page-item"><a class="page-link" href="#">2</a></li>
                     <li class="page-item"><a class="page-link" href="#">3</a></li>
                     <li class="page-item">
-                        <a class="page-link" href="#">Next</a>
+                        <a class="page-link" href="#">Ďalšia</a>
                     </li>
                 </ul>
             </nav>

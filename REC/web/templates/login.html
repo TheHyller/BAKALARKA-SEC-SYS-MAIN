@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Login - Security System{% endblock %}
+{% block title %}Prihlásenie - Bezpečnostný systém{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -65,7 +65,7 @@
 
 {% block content %}
 <div class="login-container">
-    <h2 class="login-title">Security System</h2>
+    <h2 class="login-title">Bezpečnostný systém</h2>
 
     {% if error %}
     <div class="alert alert-danger">{{ error }}</div>
@@ -84,9 +84,9 @@
             <button type="button" class="keypad-button" data-value="7">7</button>
             <button type="button" class="keypad-button" data-value="8">8</button>
             <button type="button" class="keypad-button" data-value="9">9</button>
-            <button type="button" class="keypad-button" data-value="clear">Clear</button>
+            <button type="button" class="keypad-button" data-value="clear">Vymazať</button>
             <button type="button" class="keypad-button" data-value="0">0</button>
-            <button type="button" class="keypad-button" data-value="enter">Enter</button>
+            <button type="button" class="keypad-button" data-value="enter">Potvrdiť</button>
         </div>
         <input type="hidden" id="pin-input" name="pin" value="">
     </form>
