@@ -7,3 +7,4 @@ REC/__pycache__/main_screen.cpython-313.pyc
 REC/__pycache__/settings_screen.cpython-313.pyc
 REC/config/__pycache__/settings.cpython-313.pyc
 /REC/__pycache__
+*.pyc
