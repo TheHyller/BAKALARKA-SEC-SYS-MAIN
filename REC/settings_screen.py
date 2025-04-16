@@ -14,11 +14,11 @@ class SettingsScreen(BaseScreen):
     def __init__(self, **kwargs):
         super(SettingsScreen, self).__init__(**kwargs)
         
-        # Set title using BaseScreen method
+        # Nastavenie titulku pomocou metódy BaseScreen
         self.set_title("Systémové nastavenia")
         self.add_back_button(target_screen='main')
         
-        # Create content area for settings
+        # Vytvorenie oblasti pre obsah nastavení
         content_area = self.create_content_area()
         
         # Pridanie ScrollView pre obsah nastavení
@@ -67,11 +67,97 @@ class SettingsScreen(BaseScreen):
         
         form_layout.add_widget(network_layout)
         
-        # Email Notifications Settings
+        # Konfigurácia GPIO pinov
+        gpio_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None, height=210)
+        gpio_layout.add_widget(Label(text="Konfigurácia GPIO pinov", font_size=18))
+        
+        # Výber zariadenia pre konfiguráciu GPIO
+        device_layout = BoxLayout(orientation='horizontal', spacing=5)
+        device_layout.add_widget(Label(text="Zariadenie:", size_hint_x=0.3))
+        
+        # Získanie pripojených zariadení pre spinner
+        devices = get_setting("sensor_devices", {})
+        device_names = ["Všetky zariadenia"]  # Možnosť vysielať na všetky zariadenia
+        self.device_ids = ["all"]  # Uloženie ID zariadení s rovnakým indexom ako názvy
+        
+        for device_id, device_data in devices.items():
+            name = device_data.get("name", device_id)
+            device_names.append(f"{name} ({device_id[:8]})")
+            self.device_ids.append(device_id)
+        
+        self.device_spinner = Spinner(
+            text="Všetky zariadenia",
+            values=device_names,
+            size_hint_x=0.7
+        )
+        device_layout.add_widget(self.device_spinner)
+        gpio_layout.add_widget(device_layout)
+        
+        # PIN senzora pohybu
+        motion_pin_layout = BoxLayout(orientation='horizontal', spacing=5)
+        motion_pin_layout.add_widget(Label(text="Senzor pohybu (PIN):", size_hint_x=0.3))
+        self.motion_pin = TextInput(
+            text=str(get_setting("gpio_config", {}).get("motion_pin", 23)),
+            multiline=False,
+            input_filter="int",
+            size_hint_x=0.7
+        )
+        motion_pin_layout.add_widget(self.motion_pin)
+        gpio_layout.add_widget(motion_pin_layout)
+        
+        # PIN dverového senzora
+        door_pin_layout = BoxLayout(orientation='horizontal', spacing=5)
+        door_pin_layout.add_widget(Label(text="Dverový senzor (PIN):", size_hint_x=0.3))
+        self.door_pin = TextInput(
+            text=str(get_setting("gpio_config", {}).get("door_pin", 24)),
+            multiline=False,
+            input_filter="int",
+            size_hint_x=0.7
+        )
+        door_pin_layout.add_widget(self.door_pin)
+        gpio_layout.add_widget(door_pin_layout)
+        
+        # PIN okenného senzora
+        window_pin_layout = BoxLayout(orientation='horizontal', spacing=5)
+        window_pin_layout.add_widget(Label(text="Okenný senzor (PIN):", size_hint_x=0.3))
+        self.window_pin = TextInput(
+            text=str(get_setting("gpio_config", {}).get("window_pin", 25)),
+            multiline=False,
+            input_filter="int",
+            size_hint_x=0.7
+        )
+        window_pin_layout.add_widget(self.window_pin)
+        gpio_layout.add_widget(window_pin_layout)
+        
+        # PIN LED indikátora
+        led_pin_layout = BoxLayout(orientation='horizontal', spacing=5)
+        led_pin_layout.add_widget(Label(text="LED indikátor (PIN):", size_hint_x=0.3))
+        self.led_pin = TextInput(
+            text=str(get_setting("gpio_config", {}).get("led_pin", 22)),
+            multiline=False,
+            input_filter="int",
+            size_hint_x=0.7
+        )
+        led_pin_layout.add_widget(self.led_pin)
+        gpio_layout.add_widget(led_pin_layout)
+        
+        # Tlačidlo na aplikáciu konfigurácie GPIO
+        apply_gpio_layout = BoxLayout(orientation='horizontal', spacing=5)
+        apply_gpio_button = Button(
+            text="Aplikovať konfiguráciu GPIO na zariadenia",
+            size_hint_x=1.0
+        )
+        apply_gpio_button.bind(on_release=self.apply_gpio_config)
+        apply_gpio_layout.add_widget(apply_gpio_button)
+        gpio_layout.add_widget(apply_gpio_layout)
+        
+        form_layout.add_widget(gpio_layout)
+        
+        # Nastavenia emailových notifikácií
         email_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None, height=270)
         email_layout.add_widget(Label(text="Emailové notifikácie", font_size=18))
         
-        # Enable Email Notifications
+        # Povoliť emailové notifikácie
         email_enable_layout = BoxLayout(orientation='horizontal', spacing=5)
         email_enable_layout.add_widget(Label(text="Povoliť email:", size_hint_x=0.3))
         self.email_enabled = Switch(active=get_setting("notifications.email", {}).get("enabled", False))
@@ -105,7 +191,7 @@ class SettingsScreen(BaseScreen):
         smtp_port_layout.add_widget(self.smtp_port)
         email_layout.add_widget(smtp_port_layout)
         
-        # Username
+        # Používateľské meno
         username_layout = BoxLayout(orientation='horizontal', spacing=5)
         username_layout.add_widget(Label(text="Používateľské meno:", size_hint_x=0.3))
         self.email_username = TextInput(
@@ -116,7 +202,7 @@ class SettingsScreen(BaseScreen):
         username_layout.add_widget(self.email_username)
         email_layout.add_widget(username_layout)
         
-        # Password
+        # Heslo
         password_layout = BoxLayout(orientation='horizontal', spacing=5)
         password_layout.add_widget(Label(text="Heslo:", size_hint_x=0.3))
         self.email_password = TextInput(
@@ -128,7 +214,7 @@ class SettingsScreen(BaseScreen):
         password_layout.add_widget(self.email_password)
         email_layout.add_widget(password_layout)
         
-        # From Email
+        # Emailová adresa odosielateľa
         from_email_layout = BoxLayout(orientation='horizontal', spacing=5)
         from_email_layout.add_widget(Label(text="Odosielateľ:", size_hint_x=0.3))
         self.from_email = TextInput(
@@ -139,7 +225,7 @@ class SettingsScreen(BaseScreen):
         from_email_layout.add_widget(self.from_email)
         email_layout.add_widget(from_email_layout)
         
-        # To Email
+        # Emailová adresa príjemcu
         to_email_layout = BoxLayout(orientation='horizontal', spacing=5)
         to_email_layout.add_widget(Label(text="Príjemca:", size_hint_x=0.3))
         self.to_email = TextInput(
@@ -150,7 +236,7 @@ class SettingsScreen(BaseScreen):
         to_email_layout.add_widget(self.to_email)
         email_layout.add_widget(to_email_layout)
         
-        # Test Email Button
+        # Tlačidlo na testovanie emailu
         test_email_layout = BoxLayout(orientation='horizontal', spacing=5)
         test_email_button = Button(
             text="Otestovať emailové nastavenia",
@@ -162,11 +248,11 @@ class SettingsScreen(BaseScreen):
         
         form_layout.add_widget(email_layout)
         
-        # Alert Settings
+        # Nastavenia upozornení
         alert_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None, height=150)
         alert_layout.add_widget(Label(text="Nastavenia upozornení", font_size=18))
         
-        # Alert sound
+        # Zvuk upozornenia
         sound_layout = BoxLayout(orientation='horizontal', spacing=5)
         sound_layout.add_widget(Label(text="Zvuk upozornenia:", size_hint_x=0.3))
         self.alert_sound = Switch(active=get_setting("alerts", {}).get("sound_enabled", True))
@@ -177,7 +263,7 @@ class SettingsScreen(BaseScreen):
         sound_layout.add_widget(sound_wrapper)
         alert_layout.add_widget(sound_layout)
         
-        # Alert notification type
+        # Typ notifikácie upozornenia
         notification_layout = BoxLayout(orientation='horizontal', spacing=5)
         notification_layout.add_widget(Label(text="Typ notifikácie:", size_hint_x=0.3))
         self.notification_type = Spinner(
@@ -188,7 +274,7 @@ class SettingsScreen(BaseScreen):
         notification_layout.add_widget(self.notification_type)
         alert_layout.add_widget(notification_layout)
         
-        # Alert history retention
+        # Uchovávanie histórie upozornení
         retention_layout = BoxLayout(orientation='horizontal', spacing=5)
         retention_layout.add_widget(Label(text="História (dni):", size_hint_x=0.3))
         self.retention_days = TextInput(
@@ -202,11 +288,11 @@ class SettingsScreen(BaseScreen):
         
         form_layout.add_widget(alert_layout)
         
-        # Camera and Image Settings
+        # Nastavenia kamery a obrázkov
         image_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None, height=150)
         image_layout.add_widget(Label(text="Nastavenia obrázkov", font_size=18))
         
-        # Image storage path
+        # Cesta ukladania obrázkov
         path_layout = BoxLayout(orientation='horizontal', spacing=5)
         path_layout.add_widget(Label(text="Cesta úložiska:", size_hint_x=0.3))
         self.storage_path = TextInput(
@@ -217,7 +303,7 @@ class SettingsScreen(BaseScreen):
         path_layout.add_widget(self.storage_path)
         image_layout.add_widget(path_layout)
         
-        # Image retention
+        # Uchovávanie obrázkov
         img_retention_layout = BoxLayout(orientation='horizontal', spacing=5)
         img_retention_layout.add_widget(Label(text="Uchovať obrázky (dni):", size_hint_x=0.3))
         self.img_retention_days = TextInput(
@@ -229,7 +315,7 @@ class SettingsScreen(BaseScreen):
         img_retention_layout.add_widget(self.img_retention_days)
         image_layout.add_widget(img_retention_layout)
         
-        # Image quality
+        # Kvalita obrázkov
         quality_layout = BoxLayout(orientation='horizontal', spacing=5)
         quality_layout.add_widget(Label(text="Kvalita obrázkov:", size_hint_x=0.3))
         self.image_quality = Spinner(
@@ -242,11 +328,11 @@ class SettingsScreen(BaseScreen):
         
         form_layout.add_widget(image_layout)
         
-        # System Settings
+        # Systémové nastavenia
         system_layout = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None, height=150)
         system_layout.add_widget(Label(text="Systémové nastavenia", font_size=18))
         
-        # Auto start on boot
+        # Automatické spustenie pri štarte
         autostart_layout = BoxLayout(orientation='horizontal', spacing=5)
         autostart_layout.add_widget(Label(text="Automatický štart:", size_hint_x=0.3))
         self.auto_start = Switch(active=get_setting("system", {}).get("auto_start", True))
@@ -257,7 +343,7 @@ class SettingsScreen(BaseScreen):
         autostart_layout.add_widget(autostart_wrapper)
         system_layout.add_widget(autostart_layout)
         
-        # Log level
+        # Úroveň logu
         log_layout = BoxLayout(orientation='horizontal', spacing=5)
         log_layout.add_widget(Label(text="Úroveň logu:", size_hint_x=0.3))
         self.log_level = Spinner(
@@ -268,7 +354,7 @@ class SettingsScreen(BaseScreen):
         log_layout.add_widget(self.log_level)
         system_layout.add_widget(log_layout)
         
-        # Configuration format
+        # Formát konfigurácie
         config_layout = BoxLayout(orientation='horizontal', spacing=5)
         config_layout.add_widget(Label(text="Formát konfigurácie:", size_hint_x=0.3))
         self.config_format = Spinner(
@@ -285,7 +371,7 @@ class SettingsScreen(BaseScreen):
         scroll_view.add_widget(form_layout)
         content_area.add_widget(scroll_view)
         
-        # Status message
+        # Správa o stave
         self.status_label = Label(
             text="",
             font_size=16,
@@ -293,15 +379,100 @@ class SettingsScreen(BaseScreen):
         )
         content_area.add_widget(self.status_label)
         
-        # Create footer for buttons
+        # Vytvorenie pätičky pre tlačidlá
         footer = self.create_footer()
         
         save_button = Button(text="Uložiť nastavenia")
         save_button.bind(on_release=self.save_settings)
         footer.add_widget(save_button)
         
+    def apply_gpio_config(self, instance):
+        """Aplikovať konfiguráciu GPIO na pripojené zariadenia SEND"""
+        try:
+            # Najprv uložiť konfiguráciu GPIO
+            gpio_config = {
+                "motion_pin": int(self.motion_pin.text),
+                "door_pin": int(self.door_pin.text),
+                "window_pin": int(self.window_pin.text),
+                "led_pin": int(self.led_pin.text)
+            }
+            update_setting("gpio_config", gpio_config)
+            save_settings()
+            
+            # Získať vybrané zariadenie
+            selected_device_index = self.device_spinner.values.index(self.device_spinner.text)
+            target_device_id = self.device_ids[selected_device_index]
+            
+            # Získať informácie o zariadení
+            devices = get_setting("sensor_devices", {})
+            if not devices:
+                self.status_label.text = "Žiadne pripojené zariadenia na aktualizáciu"
+                return
+            
+            # Odoslať príkazy konfigurácie GPIO na cieľové zariadenia
+            try:
+                import socket
+                success_count = 0
+                
+                if target_device_id == "all":
+                    # Odoslanie na všetky zariadenia
+                    for device_id, device in devices.items():
+                        if "ip" in device:
+                            try:
+                                # Vytvorenie UDP socketu pre odosielanie konfigurácie
+                                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                                
+                                # Formátovanie príkazu konfigurácie s nastaveniami GPIO - bez ID zariadenia
+                                config_cmd = f"CONFIG:GPIO:all:{gpio_config['motion_pin']}:{gpio_config['door_pin']}:{gpio_config['window_pin']}:{gpio_config['led_pin']}"
+                                
+                                # Odoslanie na IP zariadenia na UDP port
+                                udp_port = get_setting("network", {}).get("udp_port", 8081)
+                                sock.sendto(config_cmd.encode(), (device["ip"], udp_port))
+                                sock.close()
+                                
+                                success_count += 1
+                                print(f"DEBUG: Odoslaná konfigurácia GPIO na {device['name']} ({device['ip']})")
+                            except Exception as e:
+                                print(f"ERROR: Zlyhalo odoslanie konfigurácie GPIO na {device['name']}: {e}")
+                else:
+                    # Odoslanie na konkrétne zariadenie
+                    device = devices.get(target_device_id)
+                    if device and "ip" in device:
+                        try:
+                            # Vytvorenie UDP socketu pre odosielanie konfigurácie
+                            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                            
+                            # Formátovanie príkazu konfigurácie s nastaveniami GPIO - s konkrétnym ID zariadenia
+                            config_cmd = f"CONFIG:GPIO:{target_device_id}:{gpio_config['motion_pin']}:{gpio_config['door_pin']}:{gpio_config['window_pin']}:{gpio_config['led_pin']}"
+                            
+                            # Odoslanie na IP zariadenia na UDP port
+                            udp_port = get_setting("network", {}).get("udp_port", 8081)
+                            sock.sendto(config_cmd.encode(), (device["ip"], udp_port))
+                            sock.close()
+                            
+                            success_count = 1
+                            print(f"DEBUG: Odoslaná konfigurácia GPIO na {device['name']} ({device['ip']})")
+                        except Exception as e:
+                            print(f"ERROR: Zlyhalo odoslanie konfigurácie GPIO na {device['name']}: {e}")
+                    else:
+                        self.status_label.text = f"Zariadenie {target_device_id} nemá IP adresu"
+                        return
+                
+                if success_count > 0:
+                    if target_device_id == "all":
+                        self.status_label.text = f"GPIO konfigurácia odoslaná na {success_count} zariadení"
+                    else:
+                        device_name = devices[target_device_id].get("name", target_device_id)
+                        self.status_label.text = f"GPIO konfigurácia odoslaná na zariadenie {device_name}"
+                else:
+                    self.status_label.text = "Zlyhalo odoslanie konfigurácie na zariadenia"
+            except ImportError as e:
+                self.status_label.text = f"Chyba pri odosielaní konfigurácie: {e}"
+        except Exception as e:
+            self.status_label.text = f"Chyba pri konfigurácii GPIO: {str(e)}"
+    
     def test_email_settings(self, instance):
-        """Test email settings by sending a test email"""
+        """Otestovať nastavenia emailu odoslaním testovacieho emailu"""
         try:
             # Načítanie aktuálnych nastavení
             notifications = get_setting("notifications", {})
@@ -391,6 +562,14 @@ class SettingsScreen(BaseScreen):
             network["discovery_port"] = int(self.discovery_port.text)
             update_setting("network", network)
             
+            # Aktualizácia konfigurácie GPIO pinov
+            gpio_config = get_setting("gpio_config", {})
+            gpio_config["motion_pin"] = int(self.motion_pin.text)
+            gpio_config["door_pin"] = int(self.door_pin.text)
+            gpio_config["window_pin"] = int(self.window_pin.text)
+            gpio_config["led_pin"] = int(self.led_pin.text)
+            update_setting("gpio_config", gpio_config)
+            
             # Aktualizácia nastavení upozornení
             alerts = get_setting("alerts", {})
             alerts["sound_enabled"] = self.alert_sound.active
@@ -437,5 +616,5 @@ class SettingsScreen(BaseScreen):
             print(f"ERROR: Zlyhalo uloženie nastavení: {e}")
         
     def go_back(self, instance):
-        """Navigate back to main screen"""
+        """Návrat na hlavnú obrazovku"""
         self.go_to_screen('main')

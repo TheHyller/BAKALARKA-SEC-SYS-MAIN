@@ -11,7 +11,7 @@ except ImportError:
         return default
     def add_sensor_device(device_id, data):
         pass
-    def update_sensor_status(device_id, sensor_type, status):
+    def update_sensor_status(device_id, status_data):
         pass
 
 class TCPListener(threading.Thread):
@@ -174,7 +174,14 @@ class TCPListener(threading.Thread):
                         
                 if device_id:
                     status = "DETECTED" if trigger_type == "motion" else "OPEN"
-                    update_sensor_status(device_id, trigger_type, status)
+                    status_data = {
+                        trigger_type: {
+                            "status": status,
+                            "timestamp": time.time(),
+                            "image": filename
+                        }
+                    }
+                    update_sensor_status(device_id, status_data)
                     print(f"DEBUG: Aktualizovaný stav senzora {trigger_type} na {status} pre zariadenie {device_name}")
             
         except Exception as e:
@@ -235,8 +242,13 @@ class UDPListener(threading.Thread):
                             }
                             add_sensor_device(device_id, device_data)
                             
-                            # Aktualizácia stavu senzora
-                            update_sensor_status(device_id, sensor_type, status)
+                            status_data = {
+                                sensor_type: {
+                                    "status": status,
+                                    "timestamp": time.time()
+                                }
+                            }
+                            update_sensor_status(device_id, status_data)
                             
                     for callback in self.callbacks:
                         callback(data, address)

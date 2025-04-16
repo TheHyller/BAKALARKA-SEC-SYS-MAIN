@@ -36,13 +36,13 @@ logger = logging.getLogger("SecuritySender")
 
 # Konfigurácia
 CONFIG = {
-    "receiver_ip": "127.0.0.1",    # Will be updated by discover_receiver()
+    "receiver_ip": "127.0.0.1",    # Bude aktualizované pomocou discover_receiver()
     "tcp_port": 8080,                # Port pre prenos obrázkov
     "udp_port": 8081,                # Port pre aktualizácie stavu senzorov
     "discovery_port": 8082,          # Port pre službu objavovania
-    "motion_pin": 17,                # GPIO pin pre senzor pohybu
-    "door_pin": 18,                  # GPIO pin pre dverový senzor
-    "window_pin": 27,                # GPIO pin pre okenný senzor
+    "motion_pin": 23,                # GPIO pin pre senzor pohybu (zmenené zo 17 na 23)
+    "door_pin": 24,                  # GPIO pin pre dverový senzor (zmenené z 18 na 24)
+    "window_pin": 25,                # GPIO pin pre okenný senzor (zmenené z 27 na 25)
     "led_pin": 22,                   # GPIO pin pre stavovú LED
     "capture_interval": 5,           # Minimálny počet sekúnd medzi zachyteniami
     "discovery_interval": 30,        # Sekundy medzi vysielaním objavovania
@@ -51,17 +51,134 @@ CONFIG = {
     "device_name": "Security Sensor" # Ľudsky čitateľný názov zariadenia
 }
 
+class UDPListener(threading.Thread):
+    """Trieda pre počúvanie UDP príkazov od prijímača"""
+    def __init__(self):
+        super(UDPListener, self).__init__()
+        self.daemon = True
+        self.running = False
+        self.port = CONFIG["udp_port"]
+    
+    def run(self):
+        """Spustenie UDP poslucháča"""
+        self.running = True
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        
+        try:
+            self.socket.bind(('0.0.0.0', self.port))
+            logger.info(f"UDP poslucháč príkazov spustený na porte {self.port}")
+            
+            while self.running:
+                try:
+                    data, address = self.socket.recvfrom(1024)
+                    data = data.decode('utf-8')
+                    logger.debug(f"Prijatý UDP príkaz z {address}: {data}")
+                    
+                    # Spracovanie príkazov konfigurácie GPIO
+                    if data.startswith("CONFIG:GPIO:"):
+                        # Kontrola, či je tento príkaz pre všetky zariadenia alebo konkrétne pre nás
+                        parts = data.split(":")
+                        if len(parts) >= 7:  # FORMÁT: CONFIG:GPIO:DEVICE_ID:motion_pin:door_pin:window_pin:led_pin
+                            target_device = parts[2]
+                            # Spracuj iba ak je príkaz pre toto zariadenie alebo vysielanie ("all")
+                            if target_device == "all" or target_device == CONFIG["device_id"]:
+                                logger.info(f"Spracúvam príkaz konfigurácie GPIO pre {target_device}")
+                                self._handle_gpio_config(parts[3:])
+                            else:
+                                logger.debug(f"Ignorujem konfiguráciu GPIO pre zariadenie {target_device}, nie je pre nás ({CONFIG['device_id']})")
+                        elif len(parts) >= 6:  # Spätná kompatibilita: CONFIG:GPIO:motion_pin:door_pin:window_pin:led_pin
+                            # Nie je špecifikované ID zariadenia - predpokladajme, že je pre všetky zariadenia
+                            logger.info("Spracúvam príkaz konfigurácie GPIO (starší formát)")
+                            self._handle_gpio_config(parts[2:])
+                    
+                except Exception as e:
+                    logger.error(f"Chyba pri prijímaní UDP príkazu: {e}")
+                    time.sleep(1)
+        except Exception as e:
+            logger.error(f"Zlyhalo spustenie UDP poslucháča príkazov: {e}")
+        finally:
+            self.socket.close()
+    
+    def _handle_gpio_config(self, pin_values):
+        """Spracovanie aktualizácie konfigurácie GPIO z prijímača"""
+        try:
+            # Konvertovanie hodnôt pinov na celé čísla
+            motion_pin = int(pin_values[0])
+            door_pin = int(pin_values[1])
+            window_pin = int(pin_values[2])
+            led_pin = int(pin_values[3])
+            
+            logger.info(f"Prijatá aktualizácia konfigurácie GPIO: Pohyb={motion_pin}, Dvere={door_pin}, Okno={window_pin}, LED={led_pin}")
+            
+            # Uloženie aktuálnych hodnôt pre porovnanie
+            old_motion_pin = CONFIG["motion_pin"]
+            old_door_pin = CONFIG["door_pin"]
+            old_window_pin = CONFIG["window_pin"]
+            old_led_pin = CONFIG["led_pin"]
+            
+            # Aktualizácia CONFIG slovníka s novými hodnotami
+            CONFIG["motion_pin"] = motion_pin
+            CONFIG["door_pin"] = door_pin
+            CONFIG["window_pin"] = window_pin
+            CONFIG["led_pin"] = led_pin
+            
+            # Uloženie aktualizovanej konfigurácie
+            config_file = "sender_config.json"
+            try:
+                with open(config_file, "r") as f:
+                    saved_config = json.load(f)
+            except:
+                saved_config = {}
+            
+            # Aktualizácia uloženej konfigurácie
+            saved_config["motion_pin"] = motion_pin
+            saved_config["door_pin"] = door_pin
+            saved_config["window_pin"] = window_pin
+            saved_config["led_pin"] = led_pin
+            
+            # Zápis späť do súboru
+            with open(config_file, "w") as f:
+                json.dump(saved_config, f)
+            
+            logger.info("Konfigurácia GPIO uložená do súboru")
+            
+            # Ak sa piny zmenili a sme na skutočnom Raspberry Pi, potrebujeme
+            # rekonfigurovať GPIO piny (vyžaduje reštart aplikácie)
+            if RPI_AVAILABLE and (old_motion_pin != motion_pin or old_door_pin != door_pin or 
+                                  old_window_pin != window_pin or old_led_pin != led_pin):
+                logger.warning("Konfigurácia GPIO pinov sa zmenila. Na aplikáciu zmien je potrebný reštart.")
+                # Odoslanie potvrdzovacej správy o potrebe reštartu
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    message = f"GPIO_CONFIG_UPDATED:RESTART_REQUIRED:{CONFIG['device_id']}"
+                    sock.sendto(message.encode(), (CONFIG["receiver_ip"], CONFIG["udp_port"]))
+                except:
+                    pass
+        except Exception as e:
+            logger.error(f"Chyba pri spracovaní konfigurácie GPIO: {e}")
+    
+    def stop(self):
+        """Zastavenie UDP poslucháča"""
+        self.running = False
+        try:
+            self.socket.close()
+        except:
+            pass
+        logger.info("UDP poslucháč príkazov zastavený")
+
 class SecuritySender:
     def __init__(self):
         self.last_capture_time = 0
         self.running = False
         self.camera = None
         self.discovery_thread = None
+        self.command_listener = None  # Pridanie novej premennej pre UDP poslucháč príkazov
         
-        # Tracking variables for sensor states to prevent repeated triggers
+        # Sledovacie premenné pre stavy senzorov na zabránenie opakovaných spustení
         self.motion_active = False
         self.motion_last_triggered = 0
-        self.motion_cooldown = 5  # Seconds before motion sensor can trigger again
+        self.motion_cooldown = 5  # Sekundy pred ďalším spustením senzora pohybu
         
         # Načítanie alebo generovanie unikátneho ID zariadenia
         self._load_or_generate_device_id()
@@ -150,15 +267,15 @@ class SecuritySender:
             logger.error(f"Zlyhala inicializácia kamery: {e}")
     
     def _on_motion_detected(self, channel):
-        """Callback for motion detection with debounce functionality"""
+        """Callback pre detekciu pohybu s funkciou tlmenia opakovaných spustení"""
         current_time = time.time()
         
-        # Check if we're still in the cooldown period from a previous trigger
+        # Kontrola, či sme ešte v čase ochladzovania od predchádzajúceho spustenia
         if current_time - self.motion_last_triggered < self.motion_cooldown:
-            logger.debug(f"Motion detection ignored - within cooldown period ({self.motion_cooldown}s)")
+            logger.debug(f"Detekcia pohybu ignorovaná - v rámci času ochladzovania ({self.motion_cooldown}s)")
             return
             
-        logger.info("Motion detected!")
+        logger.info("Pohyb zaznamenaný!")
         self.motion_last_triggered = current_time
         self._send_sensor_update("motion", "DETECTED")
         self._capture_image("motion")
@@ -357,6 +474,10 @@ class SecuritySender:
         else:
             logger.info(f"Používam predvolenú IP prijímača: {CONFIG['receiver_ip']}")
         
+        # Spustenie poslucháča príkazov pre prijímanie konfiguračných príkazov
+        self.command_listener = UDPListener()
+        self.command_listener.start()
+        
         # Spusti službu objavovania
         self.discovery_thread = threading.Thread(target=self._discovery_service)
         self.discovery_thread.daemon = True
@@ -387,6 +508,10 @@ class SecuritySender:
     def stop(self):
         """Zastavenie odosielateľa zabezpečenia a vyčistenie zdrojov"""
         self.running = False
+        
+        # Zastavenie UDP poslucháča príkazov
+        if self.command_listener:
+            self.command_listener.stop()
         
         if self.camera:
             self.camera.close()

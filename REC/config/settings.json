@@ -2,9 +2,9 @@
     "pin_code": "1234",
     "system_active": false,
     "network": {
-        "tcp_port": 8080,
-        "udp_port": 8081,
-        "discovery_port": 8082,
+        "tcp_port": 9080,
+        "udp_port": 9081,
+        "discovery_port": 9082,
         "web_port": 8090
     },
     "sensors": [],
@@ -23,17 +23,63 @@
         "log_level": "INFO",
         "config_format": "JSON"
     },
+    "gpio_config": {
+        "motion_pin": 23,
+        "door_pin": 24,
+        "window_pin": 25,
+        "led_pin": 22
+    },
     "sensor_devices": {
         "31d13cb3-66ab-4541-b774-fdf6422fed4e": {
             "name": "ROG_Hyll-31d13cb3",
             "ip": "127.0.0.1",
             "last_seen": "2025-04-14T11:51:34.101762"
+        },
+        "TEST-IMAGE-DEVICE-001": {
+            "name": "Test Image Device",
+            "ip": "127.0.0.1",
+            "last_seen": "2025-04-16T19:23:49.736381",
+            "type": "test"
+        },
+        "TEST-DEVICE-001": {
+            "name": "Test Sensor",
+            "ip": "127.0.0.1",
+            "last_seen": "2025-04-16T20:30:01.821950",
+            "type": "motion"
+        },
+        "TEST-DEVICE-1744828304": {
+            "name": "Operability Test Sensor",
+            "ip": "127.0.0.1",
+            "last_seen": "2025-04-16T20:31:44.689866",
+            "type": "test"
+        },
+        "TEST-DEVICE-1744829170": {
+            "name": "Operability Test Sensor",
+            "ip": "127.0.0.1",
+            "last_seen": "2025-04-16T20:46:10.739364",
+            "type": "test"
         }
     },
     "sensor_status": {
         "31d13cb3-66ab-4541-b774-fdf6422fed4e": {
             "motion": "DETECTED",
             "last_updated": 1744624294.111142
+        },
+        "TEST-DEVICE-001": {
+            "motion": {
+                "status": "triggered",
+                "timestamp": 1744828208.8395262,
+                "value": "motion detected"
+            },
+            "last_updated": 1744828208.8395317
+        },
+        "TEST-DEVICE-1744829170": {
+            "test": {
+                "status": "ok",
+                "timestamp": 1744829170.74038,
+                "value": "test value"
+            },
+            "last_updated": 1744829170.7403846
         }
     },
     "notifications": {
@@ -47,5 +93,15 @@
             "to_email": ""
         },
         "cooldown_seconds": 60
-    }
+    },
+    "test_setting": "test_value_203001",
+    "test": {
+        "nested": {
+            "setting": "test_value_203001"
+        }
+    },
+    "tcp_port": null,
+    "udp_port": null,
+    "discovery_port": null,
+    "web_port": null
 }

@@ -3,6 +3,10 @@ import os
 import time
 from datetime import datetime, timedelta
 
+# Fix the relative import issue
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 class AlertsLogManager:
     """Správca pre manipuláciu so súborom denníka upozornení"""
     
@@ -160,7 +164,17 @@ def get_alerts(count=None, unread_only=False):
 
 def add_alert(alert_data):
     """Pridanie nového upozornenia do systému"""
-    from settings import get_setting
+    try:
+        from REC.config.settings import get_setting
+    except ImportError:
+        # Fallback to local import if module structure is different
+        try:
+            from config.settings import get_setting
+        except ImportError:
+            # Use default if we can't import settings
+            print("Warning: Could not import settings module, using default retention days")
+            return alerts_log_manager.add_alert(alert_data, 30)
+    
     retention_days = get_setting("alerts.retention_days", 30)
     return alerts_log_manager.add_alert(alert_data, retention_days)
 
